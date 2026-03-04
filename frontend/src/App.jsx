@@ -10,7 +10,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 // Pages
 import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
-//import CustomersPage from './pages/customers/CustomersPage';
+import CustomersPage from './pages/customers/CustomersPage';
 //import CustomerDetailPage from './pages/customers/CustomerDetailPage';
 //import CustomerFormPage from './pages/customers/CustomerFormPage';
 
@@ -24,7 +24,7 @@ function App() {
         <Toast />
         <Routes>
           {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           
           {/* Protected Routes */}
           <Route
@@ -38,12 +38,13 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             
-            {/* Customers 
+            
             <Route path="customers" element={<CustomersPage />} />
+            {/* Customers  
             <Route path="customers/:id" element={<CustomerDetailPage />} />
             <Route path="customers/new" element={<CustomerFormPage />} />
             <Route path="customers/:id/edit" element={<CustomerFormPage />} />
-            */}
+           */}
             {/* Add more routes here */}
           </Route>
           

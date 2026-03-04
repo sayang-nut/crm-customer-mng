@@ -305,7 +305,7 @@ const LoginPage = () => {
               Tỷ lệ gia hạn hợp đồng tăng 35% sau 3 tháng sử dụng."
             </p>
             <p className="text-sm font-semibold mt-3">
-              - Nguyễn Văn A, Sales Manager
+              Liên hệ chi tiết hotline
             </p>
           </div>
         </div>
