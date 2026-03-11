@@ -24,9 +24,8 @@ function App() {
         <Toast />
         <Routes>
           {/* Public Routes */}
-          
-           <Route path="/customerdetailpage" element={<CustomerDetailPage />} />
-          
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/customerdetailpage" element={<CustomerDetailPage />} />
           {/* Protected Routes */}
           <Route
             path="/"
