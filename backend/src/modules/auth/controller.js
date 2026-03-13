@@ -4,11 +4,11 @@
  * Auth Controller – Module 1
  * ─────────────────────────────────────────────────────────────────
  * Nhận HTTP request, gọi service, trả về response chuẩn.
- * Toàn bộ logic nghiệp vụ nằm ở auth.service.js.
+ * Toàn bộ logic nghiệp vụ nằm ở service.js.
  * ─────────────────────────────────────────────────────────────────
  */
 
-const authService = require('./auth.service');
+const authService = require('./service');
 
 /**
  * POST /api/auth/login

@@ -1,5 +1,6 @@
 'use strict';
-
+require('module-alias/register');
+ 
 /**
  * Auth Routes – Module 1
  * ─────────────────────────────────────────────────────────────────
@@ -16,9 +17,9 @@ const express    = require('express');
 const { body, param } = require('express-validator');
 const router     = express.Router();
 
-const controller = require('./auth.controller');
-const { authenticate, isAdmin } = require('../../middleware/auth.middleware');
-const { validate }              = require('../../middleware/validate.middleware');
+const controller = require('@modules/auth/controller');
+const { authenticate, isAdmin } = require('@middleware/auth/auth');
+const { validate }              = require('@middleware/auth/validate');
 
 // ── Validation schemas ────────────────────────────────────────────
 
