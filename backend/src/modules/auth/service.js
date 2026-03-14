@@ -1,4 +1,9 @@
 'use strict';
+require('module-alias/register');
+// ─────────────────────────────────────────────────────────────────
+// @file    backend/src/modules/auth/auth.service.js
+// @module  Module 1 – Auth
+// ─────────────────────────────────────────────────────────────────
 
 /**
  * Auth Service – Module 1
@@ -15,9 +20,9 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 
-const sequelize    = require('../../config/database');
-const { AppError } = require('../../middleware/error.middleware');
-const logger       = require('../../config/logger');
+const sequelize    = require('@config/database');
+const { AppError } = require('@middleware/error');
+const logger       = require('@config/logger');
 
 // ─────────────────────────────────────────────────────────────────
 // Helpers

@@ -1,5 +1,5 @@
 'use strict';
-
+require('module-alias/register');
 /**
  * Auth Middleware
  * ─────────────────────────────────────────────────────────────────
@@ -17,8 +17,8 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { ROLES } = require('../config/constants');
-const { AppError } = require('./error.middleware');
+const { ROLES } = require('@config/constants');
+const { AppError } = require('../error');
 
 // ─────────────────────────────────────────────────────────────────
 // authenticate – Xác minh access token

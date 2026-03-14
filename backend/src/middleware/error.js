@@ -10,18 +10,17 @@
 
 const logger = require('@config/logger');
 
-// ─────────────────────────────────────────────────────────────────
 // AppError – Operational errors (expected, safe to send to client)
-// ─────────────────────────────────────────────────────────────────
-class AppError extends Error {
-  constructor(message, statusCode = 500) {
-    super(message);
-    this.statusCode   = statusCode;
-    this.isOperational = true;
+
+class AppError extends Error{
+  constructor(message, statusCode){
+    super(mesage);
+    this.statusCode = statusCode; //mã lỗi
+    this.isOperational = true; //đánh dấu lỗi này là lỗi đã được xử lý, có thể gửi message cho client
     Error.captureStackTrace(this, this.constructor);
+  
   }
 }
-
 // ─────────────────────────────────────────────────────────────────
 // Global error handler
 // ─────────────────────────────────────────────────────────────────
