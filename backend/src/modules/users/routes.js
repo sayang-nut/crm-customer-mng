@@ -33,15 +33,15 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const router = express.Router();
 
-const ctrl = require('./users.controller');
+const ctrl = require('./controller');
 const {
   authenticate,
   isAdmin,
   isAdminOrManager,
   allRoles,
-} = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
-const { ROLES, USER_STATUS } = require('../../config/constants');
+} = require('@middleware/auth/auth');
+const { validate } = require('@middleware/auth/validate');
+const { ROLES, USER_STATUS } = require('@config/constants');
 
 const VALID_ROLES   = Object.values(ROLES);
 const VALID_STATUS  = Object.values(USER_STATUS);

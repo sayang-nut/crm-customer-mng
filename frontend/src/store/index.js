@@ -1,18 +1,23 @@
+/**
+ * @file     frontend/src/store/index.js
+ * @location frontend/src/store/index.js
+ * ─────────────────────────────────────────────────────────────────
+ * VAI TRÒ: Cấu hình Redux Toolkit store.
+ * Import: import store from '../store'
+ * ─────────────────────────────────────────────────────────────────
+ */
+
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice';
-import customerReducer from './slices/customerSlice';
+import customerReducer    from './slices/customerSlice';
 import notificationReducer from './slices/notificationSlice';
 
-export const store = configureStore({
+const store = configureStore({
   reducer: {
-    auth: authReducer,
-    customers: customerReducer,
+    customers:     customerReducer,
     notifications: notificationReducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: false,
-    }),
+    getDefaultMiddleware({ serializableCheck: false }),
 });
 
 export default store;

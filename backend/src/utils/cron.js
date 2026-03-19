@@ -1,215 +1,264 @@
-require('module-alias/register');
+'use strict';
 
-const cron = require('node-cron');
-const sequelize = require('@config/database');
-const logger = require('@config/logger');
-const { notifyUsers } = require('../modules/notifications/notifications.service');
+/**
+ * @file     backend/src/utils/cron.js
+ * @location backend/src/utils/cron.js
+ * ─────────────────────────────────────────────────────────────────
+ * @requires node-cron              → job scheduler
+ * @requires ../config/database     → sequelize
+ * @requires ../config/logger       → winston
+ * @requires ../config/constants    → NOTIFICATION_TYPE, BUSINESS_RULES
+ * @requires ../modules/notifications/notifications.service → notifyUsers
+ * ─────────────────────────────────────────────────────────────────
+ * VAI TRÒ: Tất cả 6 business triggers tự động.
+ *
+ * JOB 1 – contractExpiryJob  (08:00 mỗi ngày, UTC+7)
+ *   Trigger 1: Hợp đồng sắp hết hạn 30 ngày → warn_30_sent
+ *   Trigger 2: Hợp đồng sắp hết hạn 7 ngày  → warn_7_sent, status=near_expired
+ *   Trigger 3: Hợp đồng đã hết hạn 24h chưa gia hạn → expired_remind_sent
+ *   Extra:     Auto-update status expired + auto-expire customer nếu 0 HĐ active
+ *
+ * JOB 2 – ticketStaleJob  (mỗi giờ, UTC+7)
+ *   Trigger 4: Ticket open/processing chưa cập nhật 36h → stale_notified
+ *   Trigger 5: Ticket resolved 24h → nhắc sắp tự đóng → resolved_remind_sent
+ *   Trigger 6: Ticket resolved 48h → auto close → status=closed
+ *
+ * ENV VARS:
+ *   CONTRACT_WARN_DAYS_1         (default 30)
+ *   CONTRACT_WARN_DAYS_2         (default 7)
+ *   CONTRACT_EXPIRED_REMIND_HOURS (default 24)
+ *   TICKET_STALE_HOURS           (default 36)
+ *   TICKET_RESOLVED_CLOSE_HOURS  (default 48)
+ *   TICKET_RESOLVED_REMIND_HOURS (default 24)
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+const cron      = require('node-cron');
+const sequelize = require('../config/database');
+const logger    = require('../config/logger');
+const { notifyUsers }             = require('../modules/notifications/notifications.service');
 const { NOTIFICATION_TYPE, BUSINESS_RULES } = require('../config/constants');
 
-// ============================================================
-// JOB 1: Contract expiry warnings (runs every day at 08:00)
-// ============================================================
-const contractExpiryJob = cron.schedule('0 8 * * *', async () => {
-  logger.info('[CRON] Running contract expiry check...');
+// ─── Helper: lấy danh sách Admin + Manager để cũng nhận thông báo ──
+const getManagerIds = async () => {
+  const [rows] = await sequelize.query(
+    `SELECT id FROM users WHERE role IN ('admin','manager') AND status = 'active'`
+  );
+  return rows.map(r => r.id);
+};
 
+const getCskhIds = async () => {
+  const [rows] = await sequelize.query(
+    `SELECT id FROM users WHERE role = 'cskh' AND status = 'active'`
+  );
+  return rows.map(r => r.id);
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// JOB 1: Contract expiry – chạy 08:00 mỗi ngày (UTC+7)
+// ═══════════════════════════════════════════════════════════════════
+const contractExpiryJob = cron.schedule('0 8 * * *', async () => {
+  logger.info('[CRON] Contract expiry check started…');
   try {
     const {
-      CONTRACT_WARN_DAYS_1,
-      CONTRACT_WARN_DAYS_2,
-      CONTRACT_EXPIRED_REMIND_HOURS,
+      CONTRACT_WARN_DAYS_1: W1,
+      CONTRACT_WARN_DAYS_2: W2,
     } = BUSINESS_RULES;
 
-    // --- WARN 30 days ---
-    const [warn30Contracts] = await sequelize.query(`
-      SELECT c.id, c.contract_number, c.end_date, c.assigned_to,
-             cu.company_name,
-             DATEDIFF(c.end_date, CURDATE()) as days_left
-      FROM contracts c
-      JOIN customers cu ON cu.id = c.customer_id
-      WHERE c.status = 'active'
-        AND DATEDIFF(c.end_date, CURDATE()) <= ?
-        AND DATEDIFF(c.end_date, CURDATE()) > ?
-        AND c.warn_30_sent = 0
-    `, { replacements: [CONTRACT_WARN_DAYS_1, CONTRACT_WARN_DAYS_2] });
+    const mgrs  = await getManagerIds();
+    const cskhs = await getCskhIds();
 
-    for (const contract of warn30Contracts) {
-      const title = `Hợp đồng sắp hết hạn – ${contract.company_name}`;
-      const message = `Hợp đồng <b>${contract.contract_number}</b> của khách hàng <b>${contract.company_name}</b> sẽ hết hạn vào <b>${contract.end_date}</b> (còn ${contract.days_left} ngày).\n\nVui lòng liên hệ khách hàng để tư vấn gia hạn.`;
+    // ── Trigger 1: Warn 30 ngày ────────────────────────────────
+    const [warn30] = await sequelize.query(
+      `SELECT c.id, c.contract_number, c.end_date, c.assigned_to,
+              cu.company_name,
+              DATEDIFF(c.end_date, CURDATE()) AS days_left
+       FROM contracts c
+       JOIN customers cu ON cu.id = c.customer_id
+       WHERE c.status IN ('active','near_expired')
+         AND DATEDIFF(c.end_date, CURDATE()) <= ?
+         AND DATEDIFF(c.end_date, CURDATE()) >  ?
+         AND c.warn_30_sent = 0`,
+      { replacements: [W1, W2] }
+    );
 
-      // Get CSKH assigned to this customer
-      const [cskhs] = await sequelize.query(`
-        SELECT DISTINCT u.id FROM users u
-        WHERE u.role = 'cskh' AND u.status = 'active'
-      `);
-      const userIds = [contract.assigned_to, ...cskhs.map(u => u.id)];
-
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.CONTRACT_WARN_30, title, message, 'contract', contract.id);
-      await sequelize.query(`UPDATE contracts SET warn_30_sent = 1 WHERE id = ?`, { replacements: [contract.id] });
-      logger.info(`[CRON] Warn-30 sent for contract ${contract.contract_number}`);
+    for (const ct of warn30) {
+      const title = `Hợp đồng sắp hết hạn – ${ct.company_name}`;
+      const msg   = `Hợp đồng <b>${ct.contract_number}</b> của <b>${ct.company_name}</b> hết hạn ngày <b>${ct.end_date}</b> (còn ${ct.days_left} ngày). Vui lòng liên hệ gia hạn.`;
+      const ids   = [...new Set([ct.assigned_to, ...cskhs, ...mgrs].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.CONTRACT_WARN_30, title, msg, 'contract', ct.id);
+      await sequelize.query(`UPDATE contracts SET warn_30_sent = 1 WHERE id = ?`, { replacements: [ct.id] });
+      logger.info(`[CRON] Warn-30 → contract ${ct.contract_number}`);
     }
 
-    // --- WARN 7 days ---
-    const [warn7Contracts] = await sequelize.query(`
-      SELECT c.id, c.contract_number, c.end_date, c.assigned_to,
-             cu.company_name,
-             DATEDIFF(c.end_date, CURDATE()) as days_left
-      FROM contracts c
-      JOIN customers cu ON cu.id = c.customer_id
-      WHERE c.status = 'active'
-        AND DATEDIFF(c.end_date, CURDATE()) <= ?
-        AND DATEDIFF(c.end_date, CURDATE()) >= 0
-        AND c.warn_7_sent = 0
-    `, { replacements: [CONTRACT_WARN_DAYS_2] });
+    // ── Trigger 2: Warn 7 ngày ─────────────────────────────────
+    const [warn7] = await sequelize.query(
+      `SELECT c.id, c.contract_number, c.end_date, c.assigned_to,
+              cu.company_name,
+              DATEDIFF(c.end_date, CURDATE()) AS days_left
+       FROM contracts c
+       JOIN customers cu ON cu.id = c.customer_id
+       WHERE c.status IN ('active','near_expired')
+         AND DATEDIFF(c.end_date, CURDATE()) <= ?
+         AND DATEDIFF(c.end_date, CURDATE()) >= 0
+         AND c.warn_7_sent = 0`,
+      { replacements: [W2] }
+    );
 
-    for (const contract of warn7Contracts) {
-      const title = `⚠️ Hợp đồng còn ${contract.days_left} ngày hết hạn – ${contract.company_name}`;
-      const message = `Hợp đồng <b>${contract.contract_number}</b> của <b>${contract.company_name}</b> sẽ hết hạn vào <b>${contract.end_date}</b>.\n\n⚠️ Chỉ còn <b>${contract.days_left} ngày</b>. Hãy xác nhận gia hạn ngay!`;
-
-      const [cskhs] = await sequelize.query(`SELECT id FROM users WHERE role='cskh' AND status='active'`);
-      const userIds = [contract.assigned_to, ...cskhs.map(u => u.id)];
-
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.CONTRACT_WARN_7, title, message, 'contract', contract.id);
-      await sequelize.query(`UPDATE contracts SET warn_7_sent = 1, status = 'near_expired' WHERE id = ?`, { replacements: [contract.id] });
-      logger.info(`[CRON] Warn-7 sent for contract ${contract.contract_number}`);
+    for (const ct of warn7) {
+      const title = `⚠ Hợp đồng còn ${ct.days_left} ngày hết hạn – ${ct.company_name}`;
+      const msg   = `Hợp đồng <b>${ct.contract_number}</b> của <b>${ct.company_name}</b> hết hạn <b>${ct.end_date}</b>. Chỉ còn <b>${ct.days_left} ngày</b>!`;
+      const ids   = [...new Set([ct.assigned_to, ...cskhs, ...mgrs].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.CONTRACT_WARN_7, title, msg, 'contract', ct.id);
+      await sequelize.query(
+        `UPDATE contracts SET warn_7_sent = 1, status = 'near_expired' WHERE id = ?`,
+        { replacements: [ct.id] }
+      );
+      logger.info(`[CRON] Warn-7 → contract ${ct.contract_number}`);
     }
 
-    // --- EXPIRED - update status ---
-    await sequelize.query(`
-      UPDATE contracts SET status = 'expired'
-      WHERE status IN ('active','near_expired') AND end_date < CURDATE()
-    `);
+    // ── Auto-update expired status ──────────────────────────────
+    await sequelize.query(
+      `UPDATE contracts SET status = 'expired'
+       WHERE status IN ('active','near_expired') AND end_date < CURDATE()`
+    );
 
-    // Auto-expire customers whose all contracts are expired
-    await sequelize.query(`
-      UPDATE customers SET status = 'expired'
-      WHERE status = 'active'
-        AND id NOT IN (
-          SELECT DISTINCT customer_id FROM contracts
-          WHERE status = 'active' AND end_date >= CURDATE()
-        )
-        AND id IN (SELECT DISTINCT customer_id FROM contracts WHERE status = 'expired')
-    `);
+    // ── Auto-expire customer nếu hết HĐ active ─────────────────
+    await sequelize.query(
+      `UPDATE customers cu
+       SET status = 'expired'
+       WHERE status = 'active'
+         AND NOT EXISTS (
+           SELECT 1 FROM contracts c
+           WHERE c.customer_id = cu.id
+             AND c.status IN ('active','near_expired')
+             AND c.end_date >= CURDATE()
+         )
+         AND EXISTS (
+           SELECT 1 FROM contracts c
+           WHERE c.customer_id = cu.id AND c.status = 'expired'
+         )`
+    );
 
-    // --- EXPIRED unrenewed 24h reminder ---
-    const expiredReminderHoursAgo = new Date(Date.now() - CONTRACT_EXPIRED_REMIND_HOURS * 60 * 60 * 1000);
-    const [expiredUnrenewed] = await sequelize.query(`
-      SELECT c.id, c.contract_number, c.end_date, c.assigned_to, cu.company_name
-      FROM contracts c
-      JOIN customers cu ON cu.id = c.customer_id
-      WHERE c.status = 'expired'
-        AND c.end_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-        AND c.expired_remind_sent = 0
-    `);
+    // ── Trigger 3: Expired 24h chưa gia hạn ───────────────────
+    const [expiredUnrenewed] = await sequelize.query(
+      `SELECT c.id, c.contract_number, c.end_date, c.assigned_to, cu.company_name
+       FROM contracts c
+       JOIN customers cu ON cu.id = c.customer_id
+       WHERE c.status = 'expired'
+         AND c.end_date >= DATE_SUB(CURDATE(), INTERVAL 2 DAY)
+         AND c.expired_remind_sent = 0`
+    );
 
-    for (const contract of expiredUnrenewed) {
-      const title = `🔴 Hợp đồng đã hết hạn chưa gia hạn – ${contract.company_name}`;
-      const message = `Hợp đồng <b>${contract.contract_number}</b> của <b>${contract.company_name}</b> đã hết hạn ngày <b>${contract.end_date}</b> và chưa được gia hạn.\n\nVui lòng liên hệ khách hàng sớm nhất có thể.`;
-
-      const [cskhs] = await sequelize.query(`SELECT id FROM users WHERE role='cskh' AND status='active'`);
-      const userIds = [contract.assigned_to, ...cskhs.map(u => u.id)];
-
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.CONTRACT_EXPIRED_UNRENEWED, title, message, 'contract', contract.id);
-      await sequelize.query(`UPDATE contracts SET expired_remind_sent = 1 WHERE id = ?`, { replacements: [contract.id] });
+    for (const ct of expiredUnrenewed) {
+      const title = `🔴 Hợp đồng hết hạn chưa gia hạn – ${ct.company_name}`;
+      const msg   = `Hợp đồng <b>${ct.contract_number}</b> của <b>${ct.company_name}</b> đã hết hạn ngày <b>${ct.end_date}</b> và chưa được gia hạn. Hãy liên hệ ngay!`;
+      const ids   = [...new Set([ct.assigned_to, ...cskhs, ...mgrs].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.CONTRACT_EXPIRED_UNRENEWED, title, msg, 'contract', ct.id);
+      await sequelize.query(`UPDATE contracts SET expired_remind_sent = 1 WHERE id = ?`, { replacements: [ct.id] });
+      logger.info(`[CRON] Expired-remind → contract ${ct.contract_number}`);
     }
 
-    logger.info('[CRON] Contract expiry check completed.');
+    logger.info(`[CRON] Contract expiry done. warn30=${warn30.length} warn7=${warn7.length} expired=${expiredUnrenewed.length}`);
   } catch (err) {
-    logger.error('[CRON] Contract expiry job error:', err);
+    logger.error('[CRON] contractExpiryJob error:', err.message);
   }
 }, { timezone: 'Asia/Ho_Chi_Minh' });
 
-// ============================================================
-// JOB 2: Ticket stale check (runs every hour)
-// ============================================================
+// ═══════════════════════════════════════════════════════════════════
+// JOB 2: Ticket stale check – chạy mỗi giờ
+// ═══════════════════════════════════════════════════════════════════
 const ticketStaleJob = cron.schedule('0 * * * *', async () => {
-  logger.info('[CRON] Running ticket stale check...');
-
+  logger.info('[CRON] Ticket stale check started…');
   try {
-    const { TICKET_STALE_HOURS, TICKET_RESOLVED_CLOSE_HOURS, TICKET_RESOLVED_REMIND_HOURS } = BUSINESS_RULES;
+    const {
+      TICKET_STALE_HOURS:           STALE_H,
+      TICKET_RESOLVED_CLOSE_HOURS:  CLOSE_H,
+      TICKET_RESOLVED_REMIND_HOURS: REMIND_H,
+    } = BUSINESS_RULES;
 
-    // --- Stale tickets (open/processing, no update > 36h) ---
-    const [staleTickets] = await sequelize.query(`
-      SELECT t.id, t.title, t.status, t.assigned_to, t.created_by,
-             cu.company_name,
-             TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) as stale_hours
-      FROM tickets t
-      JOIN customers cu ON cu.id = t.customer_id
-      WHERE t.status IN ('open','processing')
-        AND TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) >= ?
-        AND t.stale_notified = 0
-    `, { replacements: [TICKET_STALE_HOURS] });
+    const mgrs = await getManagerIds();
 
-    for (const ticket of staleTickets) {
-      const title = `⏰ Ticket chưa cập nhật – ${ticket.company_name}`;
-      const message = `Ticket <b>#${ticket.id}: ${ticket.title}</b> của khách hàng <b>${ticket.company_name}</b> chưa được cập nhật trong ${ticket.stale_hours} giờ.\n\nVui lòng xử lý hoặc cập nhật trạng thái.`;
+    // ── Trigger 4: Ticket stale ≥ 36h ─────────────────────────
+    const [stale] = await sequelize.query(
+      `SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name,
+              TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) AS stale_hours
+       FROM tickets t
+       JOIN customers cu ON cu.id = t.customer_id
+       WHERE t.status IN ('open','processing')
+         AND TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) >= ?
+         AND t.stale_notified = 0`,
+      { replacements: [STALE_H] }
+    );
 
-      const userIds = [...new Set([ticket.assigned_to, ticket.created_by].filter(Boolean))];
-
-      // Also notify managers
-      const [managers] = await sequelize.query(`SELECT id FROM users WHERE role='manager' AND status='active'`);
-      userIds.push(...managers.map(u => u.id));
-
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.TICKET_STALE, title, message, 'ticket', ticket.id);
-      await sequelize.query(`UPDATE tickets SET stale_notified = 1 WHERE id = ?`, { replacements: [ticket.id] });
+    for (const tk of stale) {
+      const title = `⏰ Ticket chưa cập nhật ${tk.stale_hours}h – ${tk.company_name}`;
+      const msg   = `Ticket <b>#${tk.id}: ${tk.title}</b> (${tk.company_name}) chưa được cập nhật trong <b>${tk.stale_hours} giờ</b>. Vui lòng xử lý.`;
+      const ids   = [...new Set([tk.assigned_to, tk.created_by, ...mgrs].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.TICKET_STALE, title, msg, 'ticket', tk.id);
+      await sequelize.query(`UPDATE tickets SET stale_notified = 1 WHERE id = ?`, { replacements: [tk.id] });
     }
 
-    // --- Resolved tickets: remind at 24h ---
-    const [resolvedToRemind] = await sequelize.query(`
-      SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name
-      FROM tickets t
-      JOIN customers cu ON cu.id = t.customer_id
-      WHERE t.status = 'resolved'
-        AND TIMESTAMPDIFF(HOUR, t.resolved_at, NOW()) >= ?
-        AND t.resolved_remind_sent = 0
-    `, { replacements: [TICKET_RESOLVED_REMIND_HOURS] });
+    // ── Trigger 5: Resolved → remind 24h ──────────────────────
+    const [toRemind] = await sequelize.query(
+      `SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name
+       FROM tickets t
+       JOIN customers cu ON cu.id = t.customer_id
+       WHERE t.status = 'resolved'
+         AND TIMESTAMPDIFF(HOUR, t.resolved_at, NOW()) >= ?
+         AND t.resolved_remind_sent = 0`,
+      { replacements: [REMIND_H] }
+    );
 
-    for (const ticket of resolvedToRemind) {
-      const title = `📋 Ticket sẽ tự động đóng sau 24h – #${ticket.id}`;
-      const message = `Ticket <b>#${ticket.id}: ${ticket.title}</b> đang ở trạng thái Resolved.\n\nNếu không có phản hồi thêm, ticket sẽ tự động chuyển sang <b>Closed</b> sau 24 giờ nữa.`;
-
-      const userIds = [...new Set([ticket.assigned_to, ticket.created_by].filter(Boolean))];
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.TICKET_RESOLVED_REMIND, title, message, 'ticket', ticket.id);
-      await sequelize.query(`UPDATE tickets SET resolved_remind_sent = 1 WHERE id = ?`, { replacements: [ticket.id] });
+    for (const tk of toRemind) {
+      const title = `📋 Ticket sẽ tự đóng sau 24h – #${tk.id}`;
+      const msg   = `Ticket <b>#${tk.id}: ${tk.title}</b> đang Resolved. Sẽ tự động <b>Closed</b> sau 24h nếu không có cập nhật thêm.`;
+      const ids   = [...new Set([tk.assigned_to, tk.created_by].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.TICKET_RESOLVED_REMIND, title, msg, 'ticket', tk.id);
+      await sequelize.query(`UPDATE tickets SET resolved_remind_sent = 1 WHERE id = ?`, { replacements: [tk.id] });
     }
 
-    // --- Auto-close resolved tickets after 48h ---
-    const [toAutoClose] = await sequelize.query(`
-      SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name
-      FROM tickets t
-      JOIN customers cu ON cu.id = t.customer_id
-      WHERE t.status = 'resolved'
-        AND TIMESTAMPDIFF(HOUR, t.resolved_at, NOW()) >= ?
-    `, { replacements: [TICKET_RESOLVED_CLOSE_HOURS] });
+    // ── Trigger 6: Auto-close resolved ≥ 48h ──────────────────
+    const [toClose] = await sequelize.query(
+      `SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name
+       FROM tickets t
+       JOIN customers cu ON cu.id = t.customer_id
+       WHERE t.status = 'resolved'
+         AND TIMESTAMPDIFF(HOUR, t.resolved_at, NOW()) >= ?`,
+      { replacements: [CLOSE_H] }
+    );
 
-    for (const ticket of toAutoClose) {
+    for (const tk of toClose) {
       await sequelize.query(
         `UPDATE tickets SET status = 'closed', closed_at = NOW() WHERE id = ?`,
-        { replacements: [ticket.id] }
+        { replacements: [tk.id] }
       );
-
-      const title = `✅ Ticket đã tự động đóng – #${ticket.id}`;
-      const message = `Ticket <b>#${ticket.id}: ${ticket.title}</b> đã được hệ thống tự động chuyển sang trạng thái <b>Closed</b>.`;
-
-      const userIds = [...new Set([ticket.assigned_to, ticket.created_by].filter(Boolean))];
-      await notifyUsers([...new Set(userIds)], NOTIFICATION_TYPE.TICKET_AUTO_CLOSED, title, message, 'ticket', ticket.id);
-      logger.info(`[CRON] Auto-closed ticket #${ticket.id}`);
+      const title = `✅ Ticket tự động đóng – #${tk.id}`;
+      const msg   = `Ticket <b>#${tk.id}: ${tk.title}</b> đã được hệ thống tự động chuyển sang <b>Closed</b>.`;
+      const ids   = [...new Set([tk.assigned_to, tk.created_by].filter(Boolean))];
+      await notifyUsers(ids, NOTIFICATION_TYPE.TICKET_AUTO_CLOSED, title, msg, 'ticket', tk.id);
+      logger.info(`[CRON] Auto-closed ticket #${tk.id}`);
     }
 
-    logger.info('[CRON] Ticket stale check completed.');
+    logger.info(`[CRON] Ticket stale done. stale=${stale.length} remind=${toRemind.length} closed=${toClose.length}`);
   } catch (err) {
-    logger.error('[CRON] Ticket stale job error:', err);
+    logger.error('[CRON] ticketStaleJob error:', err.message);
   }
 }, { timezone: 'Asia/Ho_Chi_Minh' });
 
+// ─────────────────────────────────────────────────────────────────
+// Export
+// ─────────────────────────────────────────────────────────────────
 const startCronJobs = () => {
   contractExpiryJob.start();
   ticketStaleJob.start();
-  logger.info('[CRON] All cron jobs started.');
+  logger.info('[CRON] All 2 jobs started (contractExpiry@08:00 + ticketStale@hourly)');
 };
 
 const stopCronJobs = () => {
   contractExpiryJob.stop();
   ticketStaleJob.stop();
+  logger.info('[CRON] All jobs stopped');
 };
 
 module.exports = { startCronJobs, stopCronJobs };

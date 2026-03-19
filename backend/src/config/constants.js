@@ -12,7 +12,7 @@
 
 module.exports = {
 
-  // ── Vai trò nhân viên ────────────────────────────────────────
+  // Vai trò nhân viên
   ROLES: {
     ADMIN:     'admin',
     MANAGER:   'manager',
@@ -21,29 +21,31 @@ module.exports = {
     TECHNICAL: 'technical',
   },
 
-  // ── Trạng thái user ──────────────────────────────────────────
+  // Trạng thái user
   USER_STATUS: {
     ACTIVE:   'active',
     INACTIVE: 'inactive',
     LOCKED:   'locked',
   },
 
-  // ── Trạng thái khách hàng ────────────────────────────────────
+  //Trạng thái khách hàng 
   CUSTOMER_STATUS: {
     LEAD:    'lead',
     ACTIVE:  'active',
     EXPIRED: 'expired',
+    CHURNED: 'churned' ,
   },
 
-  // ── Trạng thái hợp đồng ──────────────────────────────────────
+  //Trạng thái hợp đồng
   CONTRACT_STATUS: {
     ACTIVE:       'active',
     NEAR_EXPIRED: 'near_expired',
     EXPIRED:      'expired',
+    CHURNED: 'churned',
     CANCELLED:    'cancelled',
   },
 
-  // ── Ticket ───────────────────────────────────────────────────
+  //Ticket
   TICKET_STATUS: {
     OPEN:       'open',
     PROCESSING: 'processing',

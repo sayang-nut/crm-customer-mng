@@ -1,3 +1,4 @@
+//frontend/src/pages/customers/CustomerFormPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, X } from 'lucide-react';

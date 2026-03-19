@@ -36,6 +36,8 @@ const authService = {
     const response = await api.post('/auth/refresh', { refreshToken });
     return response;
   },
+  
 };
+
 
 export default authService;

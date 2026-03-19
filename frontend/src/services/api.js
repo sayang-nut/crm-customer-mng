@@ -1,66 +1,93 @@
+/**
+ * @file     frontend/src/services/api.js
+ * @location frontend/src/services/api.js
+ * ─────────────────────────────────────────────────────────────────
+ * VAI TRÒ: Axios instance dùng chung cho tất cả Redux slices.
+ *
+ * - Tự động attach Authorization header từ localStorage
+ * - Auto-refresh token khi nhận 401
+ * - Redirect /login khi refresh thất bại
+ *
+ * NOTE: File này song song với authService.js (dùng cho Redux pattern).
+ *       authService.js dùng cho Auth module (React Context).
+ *       api.js dùng cho các module còn lại (Redux slices).
+ * ─────────────────────────────────────────────────────────────────
+ */
+
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// Create axios instance
 const api = axios.create({
-  baseURL: API_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
 });
 
-// Request interceptor - Add token to headers
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+// ── Request: gắn access token ─────────────────────────────────────
+api.interceptors.request.use((config) => {
+  // Lấy access token từ memory (được set bởi authService)
+  // Dùng cùng key với authService để share token
+  const token = window.__ACCESS_TOKEN__ || null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
-// Response interceptor - Handle errors
+// ── Response: auto-refresh khi 401 ───────────────────────────────
+let _refreshing = false;
+let _queue = [];
+
+const processQueue = (error, token = null) => {
+  _queue.forEach(({ resolve, reject }) => error ? reject(error) : resolve(token));
+  _queue = [];
+};
+
 api.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
+  (res) => res,
   async (error) => {
-    const originalRequest = error.config;
-
-    // If 401 and not already retried
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
+    const original = error.config;
+    if (error.response?.status === 401 && !original._retry) {
+      if (_refreshing) {
+        return new Promise((resolve, reject) => _queue.push({ resolve, reject }))
+          .then((token) => {
+            original.headers.Authorization = `Bearer ${token}`;
+            return api(original);
+          });
+      }
+      original._retry = true;
+      _refreshing = true;
       try {
-        // Try to refresh token
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_URL}/auth/refresh `, {
-          refreshToken,
-        });
+        if (!refreshToken) throw new Error('No refresh token');
 
-        const { accessToken } = response.data;
-        localStorage.setItem('accessToken', accessToken);
+        const { data } = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
+        const newToken = data.data.accessToken;
 
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed - logout user
-        localStorage.removeItem('accessToken');
+        window.__ACCESS_TOKEN__ = newToken;
+        localStorage.setItem('refreshToken', data.data.refreshToken);
+        processQueue(null, newToken);
+
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      } catch (err) {
+        processQueue(err, null);
+        window.__ACCESS_TOKEN__ = null;
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         window.location.href = '/login';
-        return Promise.reject(refreshError);
+        return Promise.reject(err);
+      } finally {
+        _refreshing = false;
       }
     }
-
     return Promise.reject(error);
   }
 );
+
+// Helper: set token từ authService (gọi sau login thành công)
+export const setApiToken = (token) => { window.__ACCESS_TOKEN__ = token; };
+export const clearApiToken = () => { window.__ACCESS_TOKEN__ = null; };
 
 export default api;

@@ -1,6 +1,10 @@
 'use strict';
-
 require('module-alias/register');
+// ─────────────────────────────────────────────────────────────────
+// @file    backend/src/app.js
+// @module  Module 1 – Auth
+// ─────────────────────────────────────────────────────────────────
+
 require('dotenv').config();
 require('express-async-errors');          // Bắt async error tự động, không cần try/catch
 
@@ -15,25 +19,23 @@ const sequelize    = require('@config/database');
 const logger       = require('@config/logger');
 const { errorHandler } = require('@middleware/error');
 
-//Route imports 
+// ── Route imports ─────────────────────────────────────────────────
 const authRoutes          = require('@modules/auth/routes');
-/*
-const usersRoutes         = require('./modules/users/users.routes');
-const customersRoutes     = require('./modules/customers/customers.routes');
-const solutionsRoutes     = require('./modules/solutions/solutions.routes');
-const contractsRoutes     = require('./modules/contracts/contracts.routes');
-const ticketsRoutes       = require('./modules/tickets/tickets.routes');
-const revenuesRoutes      = require('./modules/revenues/revenues.routes');
-const dashboardRoutes     = require('./modules/dashboard/dashboard.routes');
-const notificationsRoutes = require('./modules/notifications/notifications.routes');
-*/
+const usersRoutes         = require('@modules/users/routes');
+//const customersRoutes     = require('@modules/customers/routes');
+//const solutionsRoutes     = require('@modules/solutions/routes');
+//const contractsRoutes     = require('@modules/contracts/routes');
+//const ticketsRoutes       = require('@modules/tickets/routes');
+//const revenuesRoutes      = require('@modules/revenues/routes');
+//const dashboardRoutes     = require('@modules/dashboard/routes');
+//const notificationsRoutes = require('@modules/notifications/routes');
 
 const app = express();
 
-// Security headers
+// ── Security headers ──────────────────────────────────────────────
 app.use(helmet());
 
-//CORS 
+// ── CORS ──────────────────────────────────────────────────────────
 app.use(cors({
   origin: (process.env.FRONTEND_URL || 'http://localhost:5173').split(','),
   credentials: true,
@@ -41,20 +43,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// Compression
+// ── Compression ───────────────────────────────────────────────────
 app.use(compression());
 
-// Request logging 
+// ── Request logging ───────────────────────────────────────────────
 app.use(morgan(
   process.env.NODE_ENV === 'production' ? 'combined' : 'dev',
   { stream: { write: (msg) => logger.info(msg.trim()) } }
 ));
 
-// Body parsers 
+// ── Body parsers ──────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiters
+// ── Rate limiters ─────────────────────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,   // 15 phút
   max: 20,
@@ -75,16 +77,15 @@ const apiLimiter = rateLimit({
 
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth',          authLimiter, authRoutes);
-/*
 app.use('/api/users',         apiLimiter,  usersRoutes);
-app.use('/api/customers',     apiLimiter,  customersRoutes);
-app.use('/api/solutions',     apiLimiter,  solutionsRoutes);
-app.use('/api/contracts',     apiLimiter,  contractsRoutes);
-app.use('/api/tickets',       apiLimiter,  ticketsRoutes);
-app.use('/api/revenues',      apiLimiter,  revenuesRoutes);
-app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
-app.use('/api/notifications', apiLimiter,  notificationsRoutes);
-*/
+// app.use('/api/customers',     apiLimiter,  customersRoutes);
+// app.use('/api/solutions',     apiLimiter,  solutionsRoutes);
+// app.use('/api/contracts',     apiLimiter,  contractsRoutes);
+// app.use('/api/tickets',       apiLimiter,  ticketsRoutes);
+//app.use('/api/revenues',      apiLimiter,  revenuesRoutes);
+//app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
+//app.use('/api/notifications', apiLimiter,  notificationsRoutes);
+
 // ── Health check ──────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
@@ -133,11 +134,11 @@ const start = async () => {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT',  () => shutdown('SIGINT'));
 
-    /* Chạy cron jobs sau khi server lên
+    // Chạy cron jobs sau khi server lên
     if (process.env.NODE_ENV !== 'test') {
       const { startCronJobs } = require('./utils/cron');
       startCronJobs();
-    }*/
+    }
 
   } catch (err) {
     logger.error('❌ Failed to start server:', err);

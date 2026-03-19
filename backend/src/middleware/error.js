@@ -14,7 +14,7 @@ const logger = require('@config/logger');
 
 class AppError extends Error{
   constructor(message, statusCode){
-    super(mesage);
+    super(message);
     this.statusCode = statusCode; //mã lỗi
     this.isOperational = true; //đánh dấu lỗi này là lỗi đã được xử lý, có thể gửi message cho client
     Error.captureStackTrace(this, this.constructor);

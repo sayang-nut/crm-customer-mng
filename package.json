@@ -5,24 +5,22 @@
   "private": true,
   "author": "Bado Technology",
   "license": "UNLICENSED",
-
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
   },
-
   "scripts": {
-    "install:all":   "npm install && cd backend && npm install && cd ../frontend && npm install",
-
-    "dev":           "concurrently -n BE,FE -c cyan,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "dev:be":        "npm run dev --prefix backend",
-    "dev:fe":        "npm run dev --prefix frontend",
-
-    "build":         "npm run build --prefix frontend",
-    "start":         "npm run start --prefix backend"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently -n BE,FE -c cyan,magenta \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:be": "npm run dev --prefix backend",
+    "dev:fe": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend"
   },
-
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "autoprefixer": "^10.4.27",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2"
   }
 }

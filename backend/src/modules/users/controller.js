@@ -24,7 +24,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-const usersService = require('./users.service');
+const usersService = require('./service');
 
 // GET /api/users?page=1&limit=20&status=active&role=sales&search=...
 const list = async (req, res, next) => {

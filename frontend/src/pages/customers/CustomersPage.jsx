@@ -1,3 +1,4 @@
+//frontend/src/pages/customers/CustomersPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
