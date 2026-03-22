@@ -1,32 +1,37 @@
-import React, { useEffect } from 'react';
+/**
+ * @file     frontend/src/components/auth/ProtectedRoute.jsx
+ * FIX: Chờ isLoading = false trước khi quyết định redirect
+ */
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchCurrentUser } from '../../store/slices/authSlice';
-import Loading from '../common/Loading';
+import { useAuth } from '../../store/authContext';
 
-const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const dispatch = useAppDispatch();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, isLoading } = useAuth();
   const location = useLocation();
-  const { isAuthenticated, user, loading } = useAppSelector((state) => state.auth);
-  
-  useEffect(() => {
-    if (isAuthenticated && !user) {
-      dispatch(fetchCurrentUser());
-    }
-  }, [isAuthenticated, user, dispatch]);
-  
-  if (loading) {
-    return <Loading fullScreen text="Đang tải thông tin người dùng..." />;
+
+  // ✅ Chờ init xong
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#080E1A',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'sans-serif', color: '#64748B', fontSize: 14,
+      }}>
+        Đang tải...
+      </div>
+    );
   }
-  
-  if (!isAuthenticated) {
+
+  // Chưa đăng nhập
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  
-  if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
+
+  // Sai role
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/403" replace />;
   }
-  
+
   return children;
 };
 

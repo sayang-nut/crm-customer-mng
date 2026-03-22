@@ -8,7 +8,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { api } from './authService';
+import api from './api';
 
 const BASE = '/api/contracts';
 

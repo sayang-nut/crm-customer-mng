@@ -17,7 +17,6 @@
  *   Tạo/Sửa/Xóa: Admin only
  * ─────────────────────────────────────────────────────────────────
  */
-require('module-alias/register');
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@store/authContext';
 import solutionsService from '@services/solutionsService';

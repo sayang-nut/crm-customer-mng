@@ -54,21 +54,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Rate limiters ─────────────────────────────────────────────────
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 phút
-  max: 20,
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 20 : 1000, // ← dev = không giới hạn thực tế
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (req) => process.env.NODE_ENV !== 'production', // ← SKIP hoàn toàn khi dev
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,    // 1 phút
+  windowMs: 1 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (req) => process.env.NODE_ENV !== 'production', // ← SKIP hoàn toàn khi dev
 });
 
 // ── API Routes ────────────────────────────────────────────────────

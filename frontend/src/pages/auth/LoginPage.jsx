@@ -1,316 +1,464 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * @file     frontend/src/pages/auth/LoginPage.jsx
+ * @location frontend/src/pages/auth/
+ * ─────────────────────────────────────────────────────────────────
+ * VAI TRÒ: Trang đăng nhập – cổng vào duy nhất của toàn hệ thống.
+ *   - Form email + password với validation client-side
+ *   - Gọi AuthContext.login()
+ *   - Redirect về dashboard sau khi đăng nhập thành công
+ *   - Hiển thị toast nếu có state.message (sau đổi mật khẩu)
+ * ─────────────────────────────────────────────────────────────────
+ */
+
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { login, clearError } from '../../store/slices/authSlice';
-import Input from '../../components/common/Input';
-import Button from '../../components/common/Button';
+import { useAuth } from '../../store/authContext';
 
+// ── Helpers ───────────────────────────────────────────────────────
+const ROLE_DASHBOARD = {
+  admin:     '/dashboard',
+  manager:   '/dashboard',
+  sales:     '/dashboard/sales',
+  cskh:      '/dashboard/cskh',
+  technical: '/tickets',
+};
+
+// ── Icons ─────────────────────────────────────────────────────────
+const EyeIcon = ({ open }) => open ? (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+) : (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+);
+
+const CheckCircleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
+
+// ── Animated background grid ──────────────────────────────────────
+const GridBackground = () => (
+  <div style={{
+    position: 'fixed', inset: 0, zIndex: 0,
+    background: 'radial-gradient(ellipse 80% 60% at 60% 40%, rgba(37,99,235,0.08) 0%, transparent 70%), #080E1A',
+    overflow: 'hidden',
+  }}>
+    {/* Grid lines */}
+    <svg width="100%" height="100%" style={{ position: 'absolute', opacity: 0.035 }}>
+      <defs>
+        <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+          <path d="M 56 0 L 0 0 0 56" fill="none" stroke="#60A5FA" strokeWidth="0.5"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+    </svg>
+
+    {/* Glow orbs */}
+    <div style={{
+      position: 'absolute', width: 600, height: 600,
+      borderRadius: '50%', filter: 'blur(120px)',
+      background: 'rgba(37,99,235,0.12)',
+      top: '-10%', right: '5%',
+    }} />
+    <div style={{
+      position: 'absolute', width: 400, height: 400,
+      borderRadius: '50%', filter: 'blur(100px)',
+      background: 'rgba(139,92,246,0.08)',
+      bottom: '10%', left: '-5%',
+    }} />
+  </div>
+);
+
+// ── Main Component ────────────────────────────────────────────────
 const LoginPage = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const dispatch = useAppDispatch();
-  const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { login, isAuthenticated, user } = useAuth();
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw,   setShowPw]   = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [toast,    setToast]    = useState('');
+  const [focused,  setFocused]  = useState('');
+  const [mounted,  setMounted]  = useState(false);
 
+  const emailRef   = useRef(null);
+  const toastTimer = useRef(null);
+
+  // Entrance animation
   useEffect(() => {
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location]);
+    setTimeout(() => setMounted(true), 50);
+    emailRef.current?.focus();
 
+    // Toast từ redirect (đổi mật khẩu xong)
+    if (location.state?.message) {
+      setToast(location.state.message);
+      window.history.replaceState({}, document.title);
+    }
+    return () => clearTimeout(toastTimer.current);
+  }, []);
+
+  // Redirect nếu đã đăng nhập
   useEffect(() => {
-    dispatch(clearError());
-  }, [dispatch]);
-
-  const validateForm = () => {
-    const errors = {};
-
-    if (!formData.email) {
-      errors.email = 'Vui lòng nhập email';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Email không hợp lệ';
+    if (isAuthenticated && user) {
+      const dest = ROLE_DASHBOARD[user.role] || '/dashboard';
+      navigate(dest, { replace: true });
     }
+  }, [isAuthenticated, user, navigate]);
 
-    if (!formData.password) {
-      errors.password = 'Vui lòng nhập mật khẩu';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
+  // Auto clear error
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(t);
+  }, [error]);
 
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear validation error when user types
-    if (validationErrors[name]) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
-  };
+  // Auto clear toast
+  useEffect(() => {
+    if (!toast) return;
+    toastTimer.current = setTimeout(() => setToast(''), 5000);
+    return () => clearTimeout(toastTimer.current);
+  }, [toast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
+    if (!email.trim() || !password.trim()) {
+      setError('Vui lòng nhập đầy đủ email và mật khẩu.');
       return;
     }
-
+    setLoading(true);
+    setError('');
     try {
-      await dispatch(login(formData)).unwrap();
-      // Navigation handled by useEffect
+      const result = await login(email.trim(), password);
+      const dest = ROLE_DASHBOARD[result.user.role] || '/dashboard';
+      navigate(dest, { replace: true });
     } catch (err) {
-      // Error handled by Redux
-      console.error('Login failed:', err);
+      const status = err.response?.status;
+      const msg    = err.response?.data?.message;
+      if (status === 401) setError('Email hoặc mật khẩu không đúng.');
+      else if (status === 403) setError(msg || 'Tài khoản không có quyền đăng nhập.');
+      else if (status === 422) setError('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      else if (status === 429) setError('Quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.');
+      else setError('Lỗi kết nối. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ── Styles ──────────────────────────────────────────────────────
+  const s = {
+    page: {
+      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      padding: '20px', position: 'relative',
+    },
+
+    card: {
+      position: 'relative', zIndex: 1,
+      width: '100%', maxWidth: 440,
+      background: 'rgba(13,20,36,0.85)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 20,
+      backdropFilter: 'blur(24px)',
+      padding: '44px 40px 40px',
+      boxShadow: '0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+      transform: mounted ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.97)',
+      opacity:   mounted ? 1 : 0,
+      transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease',
+    },
+
+    logoRow: {
+      display: 'flex', alignItems: 'center', gap: 12,
+      marginBottom: 32,
+    },
+    logoMark: {
+      width: 42, height: 42, borderRadius: 12,
+      background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 19, fontWeight: 900, color: '#fff',
+      letterSpacing: -1, flexShrink: 0,
+      boxShadow: '0 4px 16px rgba(37,99,235,0.4)',
+    },
+    logoText: {
+      fontSize: 22, fontWeight: 800, color: '#F1F5F9',
+      letterSpacing: '-0.5px', lineHeight: 1.1,
+    },
+    logoSub: {
+      fontSize: 11, color: '#64748B', fontWeight: 500, marginTop: 2,
+      letterSpacing: '0.06em', textTransform: 'uppercase',
+    },
+
+    heading: {
+      fontSize: 26, fontWeight: 700, color: '#F1F5F9',
+      letterSpacing: '-0.5px', marginBottom: 6,
+    },
+    subheading: {
+      fontSize: 14, color: '#64748B', marginBottom: 32, lineHeight: 1.5,
+    },
+
+    fieldWrap: { marginBottom: 18 },
+    label: {
+      display: 'block', fontSize: 13, fontWeight: 600,
+      color: '#94A3B8', marginBottom: 8, letterSpacing: '0.02em',
+    },
+    inputWrap: {
+      position: 'relative',
+    },
+    input: (name) => ({
+      width: '100%', boxSizing: 'border-box',
+      padding: '13px 16px',
+      background: focused === name
+        ? 'rgba(37,99,235,0.06)'
+        : 'rgba(255,255,255,0.04)',
+      border: `1.5px solid ${focused === name ? 'rgba(37,99,235,0.6)' : 'rgba(255,255,255,0.08)'}`,
+      borderRadius: 10, color: '#F1F5F9',
+      fontSize: 15, outline: 'none',
+      transition: 'all 0.2s ease',
+      fontFamily: 'inherit',
+      boxShadow: focused === name ? '0 0 0 4px rgba(37,99,235,0.12)' : 'none',
+    }),
+    inputPw: (name) => ({
+      ...s.input(name),
+      paddingRight: 46,
+    }),
+    eyeBtn: {
+      position: 'absolute', right: 14, top: '50%',
+      transform: 'translateY(-50%)',
+      background: 'none', border: 'none', cursor: 'pointer',
+      color: '#64748B', display: 'flex', padding: 4,
+      transition: 'color 0.15s',
+    },
+
+    error: {
+      display: 'flex', alignItems: 'flex-start', gap: 10,
+      padding: '12px 14px',
+      background: 'rgba(239,68,68,0.1)',
+      border: '1px solid rgba(239,68,68,0.25)',
+      borderRadius: 10, marginBottom: 20,
+      fontSize: 13.5, color: '#FCA5A5', lineHeight: 1.5,
+      animation: 'fadeIn 0.2s ease',
+    },
+    errorDot: {
+      width: 6, height: 6, borderRadius: '50%',
+      background: '#EF4444', flexShrink: 0, marginTop: 4,
+    },
+
+    btn: {
+      width: '100%', padding: '14px',
+      background: loading
+        ? 'rgba(37,99,235,0.6)'
+        : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+      border: 'none', borderRadius: 10,
+      color: '#fff', fontSize: 15, fontWeight: 700,
+      cursor: loading ? 'not-allowed' : 'pointer',
+      letterSpacing: '-0.2px',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+      transition: 'all 0.2s ease',
+      boxShadow: loading ? 'none' : '0 4px 20px rgba(37,99,235,0.35)',
+      transform: loading ? 'scale(0.99)' : 'scale(1)',
+      fontFamily: 'inherit',
+    },
+
+    spinner: {
+      width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
+      borderTop: '2px solid #fff', borderRadius: '50%',
+      animation: 'spin 0.7s linear infinite',
+    },
+
+    divider: {
+      display: 'flex', alignItems: 'center', gap: 12,
+      margin: '24px 0',
+    },
+    dividerLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' },
+    dividerText: { fontSize: 12, color: '#475569', fontWeight: 500, whiteSpace: 'nowrap' },
+
+    hint: {
+      background: 'rgba(255,255,255,0.025)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 10, padding: '12px 14px',
+      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px',
+    },
+    hintItem: { fontSize: 12, color: '#475569', display: 'flex', gap: 6, alignItems: 'center' },
+    hintDot: { width: 4, height: 4, borderRadius: '50%', background: '#334155', flexShrink: 0 },
+
+    footer: {
+      marginTop: 28, textAlign: 'center',
+      fontSize: 12, color: '#334155', lineHeight: 1.6,
+    },
+
+    toast: {
+      position: 'fixed', top: 24, left: '50%',
+      transform: toast ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-16px)',
+      opacity: toast ? 1 : 0,
+      transition: 'all 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+      zIndex: 100,
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: 'rgba(16,185,129,0.15)',
+      border: '1px solid rgba(16,185,129,0.35)',
+      borderRadius: 12, padding: '12px 20px',
+      backdropFilter: 'blur(16px)',
+      color: '#6EE7B7', fontSize: 14, fontWeight: 500,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      maxWidth: 420, textAlign: 'center',
+    },
+  };
+
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
-        <div className="w-full max-w-md">
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+        input:-webkit-autofill {
+          -webkit-box-shadow: 0 0 0 1000px rgba(13,20,36,0.95) inset !important;
+          -webkit-text-fill-color: #F1F5F9 !important;
+          caret-color: #F1F5F9;
+        }
+      `}</style>
+
+      <GridBackground />
+
+      {/* Toast notification */}
+      <div style={s.toast}>
+        <CheckCircleIcon />
+        {toast}
+      </div>
+
+      <div style={s.page}>
+        <div style={s.card}>
+
           {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4">
-              <span className="text-white font-bold text-2xl">B</span>
+          <div style={s.logoRow}>
+            <div style={s.logoMark}>B</div>
+            <div>
+              <div style={s.logoText}>Bado CRM</div>
+              <div style={s.logoSub}>Quản lý khách hàng</div>
             </div>
-            <h1 className="text-3xl font-bold text-dark-900 mb-2">
-              Chào mừng trở lại!
-            </h1>
-            <p className="text-gray-600">
-              Đăng nhập để tiếp tục sử dụng BADO CRM
-            </p>
           </div>
 
-          {/* Error Alert */}
+          {/* Heading */}
+          <h1 style={s.heading}>Đăng nhập</h1>
+          <p style={s.subheading}>Nhập thông tin tài khoản được cấp bởi Admin</p>
+
+          {/* Error */}
           {error && (
-            <div className="alert alert-danger mb-6">
-              <div className="flex-1">
-                <p className="font-medium">Đăng nhập thất bại</p>
-                <p className="text-sm mt-1">
-                  {error.message || 'Email hoặc mật khẩu không đúng'}
-                </p>
-              </div>
+            <div style={s.error}>
+              <div style={s.errorDot} />
+              {error}
             </div>
           )}
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Form */}
+          <form onSubmit={handleSubmit} noValidate>
             {/* Email */}
-            <div>
-              <label className="label label-required">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div style={s.fieldWrap}>
+              <label style={s.label} htmlFor="email">Email</label>
+              <div style={s.inputWrap}>
                 <input
+                  id="email"
+                  ref={emailRef}
                   type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="admin@bado.vn"
-                  className={`input pl-10 ${
-                    validationErrors.email ? 'input-error' : ''
-                  }`}
                   autoComplete="email"
-                  autoFocus
+                  placeholder="ten@bado.vn"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setFocused('email')}
+                  onBlur={() => setFocused('')}
+                  style={s.input('email')}
+                  disabled={loading}
                 />
               </div>
-              {validationErrors.email && (
-                <p className="error-message">{validationErrors.email}</p>
-              )}
             </div>
 
             {/* Password */}
-            <div>
-              <label className="label label-required">Mật khẩu</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div style={s.fieldWrap}>
+              <label style={s.label} htmlFor="password">Mật khẩu</label>
+              <div style={s.inputWrap}>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className={`input pl-10 pr-10 ${
-                    validationErrors.password ? 'input-error' : ''
-                  }`}
+                  id="password"
+                  type={showPw ? 'text' : 'password'}
                   autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused('')}
+                  style={s.inputPw('password')}
+                  disabled={loading}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  style={s.eyeBtn}
+                  onClick={() => setShowPw(!showPw)}
+                  tabIndex={-1}
+                  aria-label={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  <EyeIcon open={showPw} />
                 </button>
               </div>
-              {validationErrors.password && (
-                <p className="error-message">{validationErrors.password}</p>
-              )}
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="checkbox"
-                />
-                <span className="text-sm text-gray-700">Ghi nhớ đăng nhập</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-sm text-primary-500 hover:text-primary-600 font-medium"
-              >
-                Quên mật khẩu?
-              </button>
-            </div>
-
-            {/* Submit Button */}
-            <Button
+            {/* Submit */}
+            <button
               type="submit"
-              variant="primary-gradient"
-              size="lg"
-              fullWidth
-              loading={loading}
+              style={s.btn}
               disabled={loading}
+              onMouseEnter={(e) => { if (!loading) e.currentTarget.style.transform = 'scale(1.01)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
             >
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-            </Button>
+              {loading ? (
+                <>
+                  <div style={s.spinner} />
+                  Đang đăng nhập…
+                </>
+              ) : 'Đăng nhập'}
+            </button>
           </form>
 
-          {/* Demo Accounts */}
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-medium text-blue-900 mb-2">
-              🎯 Tài khoản demo:
-            </p>
-            <div className="text-xs text-blue-800 space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@bado.vn / admin123
-              </p>
-              <p>
-                <strong>Sales:</strong> sales@bado.vn / sales123
-              </p>
-              <p>
-                <strong>CSKH:</strong> cskh@bado.vn / cskh123
-              </p>
-            </div>
+          {/* Divider */}
+          <div style={s.divider}>
+            <div style={s.dividerLine} />
+            <span style={s.dividerText}>Tài khoản demo</span>
+            <div style={s.dividerLine} />
+          </div>
+
+          {/* Hint */}
+          <div style={s.hint}>
+            {[
+              ['Admin',    'admin@bado.vn'],
+              ['Manager',  'manager@bado.vn'],
+              ['Sales',    'sales@bado.vn'],
+              ['CSKH',     'cskh@bado.vn'],
+            ].map(([role, email]) => (
+              <div
+                key={role}
+                style={{ ...s.hintItem, cursor: 'pointer' }}
+                onClick={() => { setEmail(email); setPassword('Bado@123'); }}
+                title="Click để điền tự động"
+              >
+                <div style={s.hintDot} />
+                <span style={{ color: '#64748B', fontWeight: 600 }}>{role}:</span>
+                <span style={{ color: '#475569' }}>{email}</span>
+              </div>
+            ))}
           </div>
 
           {/* Footer */}
-          <div className="mt-8 text-center text-sm text-gray-600">
-            <p>
-              © 2024 BADO CRM. All rights reserved.
-            </p>
+          <div style={s.footer}>
+            Quên mật khẩu? Liên hệ <span style={{ color: '#2563EB', fontWeight: 600 }}>Admin</span> để được cấp lại.
           </div>
         </div>
       </div>
-
-      {/* Right Side - Branding */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 items-center justify-center p-12">
-        <div className="max-w-lg text-white">
-          <h2 className="text-4xl font-bold mb-6">
-            BADO CRM
-          </h2>
-          <p className="text-xl mb-8 text-primary-100">
-            Bán Hàng Hiệu Quả – Vận Hành Tiện Lợi – Quản Lý An Toàn
-          </p>
-
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                  <path
-                    fillRule="evenodd"
-                    d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">
-                  Quản lý tập trung
-                </h3>
-                <p className="text-primary-100">
-                  Tất cả thông tin khách hàng, hợp đồng, tickets tại một nơi
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">
-                  Báo cáo trực quan
-                </h3>
-                <p className="text-primary-100">
-                  Dashboard và biểu đồ realtime hỗ trợ ra quyết định
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">
-                  Tự động hóa
-                </h3>
-                <p className="text-primary-100">
-                  Nhắc nhở gia hạn, phân công tickets tự động
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 p-6 bg-white bg-opacity-10 rounded-xl backdrop-blur-sm">
-            <p className="text-sm italic">
-              "BADO CRM giúp chúng tôi quản lý hơn 1,000 khách hàng một cách hiệu quả. 
-              Tỷ lệ gia hạn hợp đồng tăng 35% sau 3 tháng sử dụng."
-            </p>
-            <p className="text-sm font-semibold mt-3">
-              Liên hệ chi tiết hotline
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 

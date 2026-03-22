@@ -5,7 +5,7 @@
  * @requires ./authService → api (axios instance với auto-refresh)
  * ─────────────────────────────────────────────────────────────────
  */
-import { api } from './authService';
+import api from './api';
 const BASE = '/api/notifications';
 
 export const notificationsService = {
