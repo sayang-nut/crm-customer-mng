@@ -26,10 +26,10 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-const sequelize    = require('../../config/database');
-const { AppError } = require('../../middleware/error.middleware');
-const logger       = require('../../config/logger');
-const { ROLES, CUSTOMER_STATUS } = require('../../config/constants');
+const sequelize    = require('@config/database');
+const { AppError } = require('@middleware/error');
+const logger       = require('@config/logger');
+const { ROLES, CUSTOMER_STATUS } = require('@config/constants');
 
 // ─── Helper: lấy customer đầy đủ (dùng nội bộ) ──────────────────
 const _getById = async (id) => {

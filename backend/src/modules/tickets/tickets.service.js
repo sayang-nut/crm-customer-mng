@@ -30,11 +30,11 @@
  *   Admin/Mgr → thấy tất cả
  * ─────────────────────────────────────────────────────────────────
  */
-
-const sequelize    = require('../../config/database');
-const { AppError } = require('../../middleware/error.middleware');
-const logger       = require('../../config/logger');
-const { ROLES, TICKET_STATUS, TICKET_PRIORITY } = require('../../config/constants');
+require('module-alias/register');
+const sequelize    = require('@config/database');
+const { AppError } = require('@middleware/error');
+const logger       = require('@config/logger');
+const { ROLES, TICKET_STATUS, TICKET_PRIORITY } = require('@config/constants');
 
 // ─── Helper: lấy ticket đầy đủ ──────────────────────────────────
 const _getById = async (id) => {

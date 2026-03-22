@@ -14,13 +14,14 @@
  * LƯU Ý: /unread-count và /mark-all-read khai báo TRƯỚC /:id
  * ─────────────────────────────────────────────────────────────────
  */
-
+require('module-alias/register');
 const express = require('express');
 const { param, query } = require('express-validator');
+
 const router = express.Router();
 const ctrl = require('./notifications.controller');
-const { authenticate, allRoles } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
+const { authenticate, allRoles } = require('@middleware/auth/auth');
+const { validate } = require('@middleware/auth/validate');
 
 router.use(authenticate);
 

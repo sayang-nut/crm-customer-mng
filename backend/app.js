@@ -23,8 +23,10 @@ const contractsRoutes     = require('./modules/contracts/contracts.routes');
 const ticketsRoutes       = require('./modules/tickets/tickets.routes');
 const revenuesRoutes      = require('./modules/revenues/revenues.routes');
 const dashboardRoutes     = require('./modules/dashboard/dashboard.routes');
+
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 
+console.log('✅ Dashboard routes loaded:', dashboardRoutes);
 
 const app = express();
 

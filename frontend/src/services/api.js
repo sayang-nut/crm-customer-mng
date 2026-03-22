@@ -1,7 +1,6 @@
 /**
  * @file     frontend/src/services/api.js
  * Single Source of Truth cho Axios.
- * FIX: Chỉ redirect /login khi chưa ở /login (tránh loop)
  */
 import axios from 'axios';
 

@@ -25,11 +25,11 @@
  *   Admin/Manager/CSKH: xem tất cả
  * ─────────────────────────────────────────────────────────────────
  */
-
-const sequelize    = require('../../config/database');
-const { AppError } = require('../../middleware/error.middleware');
-const logger       = require('../../config/logger');
-const { ROLES, CONTRACT_STATUS } = require('../../config/constants');
+require('module-alias/register');
+const sequelize    = require('@config/database');
+const { AppError } = require('@middleware/error');
+const logger       = require('@config/logger');
+const { ROLES, CONTRACT_STATUS } = require('@config/constants');
 
 // ─── Helper: lấy contract đầy đủ ────────────────────────────────
 const _getById = async (id) => {

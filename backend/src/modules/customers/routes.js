@@ -1,5 +1,5 @@
 'use strict';
-
+require('module-alias/register');
 /**
  * @file     backend/src/modules/customers/customers.routes.js
  * @location backend/src/modules/customers/customers.routes.js
@@ -30,10 +30,10 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const router = express.Router();
 
-const ctrl = require('./customers.controller');
-const { authenticate, authorize, allRoles, notTechnical } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
-const { ROLES, CUSTOMER_STATUS } = require('../../config/constants');
+const ctrl = require('./controller');
+const { authenticate, authorize, allRoles, notTechnical } = require('@middleware/auth/auth');
+const { validate } = require('@middleware/auth/validate');
+const { ROLES, CUSTOMER_STATUS } = require('@config/constants');
 
 const VALID_STATUS   = Object.values(CUSTOMER_STATUS);       // lead, active, expired
 const CAN_WRITE      = [ROLES.ADMIN, ROLES.SALES];

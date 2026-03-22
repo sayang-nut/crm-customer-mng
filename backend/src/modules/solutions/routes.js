@@ -18,13 +18,14 @@
  *   /industries, /groups, /packages  → khai báo trước /:id
  * ─────────────────────────────────────────────────────────────────
  */
-import 'module-alias/register';
+require('module-alias/register');
+
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const router = express.Router();
 
 const ctrl = require('./controller');
-const { authenticate, isAdmin, allRoles } = require('@iddleware/auth/auth');
+const { authenticate, isAdmin, allRoles } = require('@middleware/auth/auth');
 const { validate } = require('@middleware/auth/validate');
 
 const LEVELS   = ['support', 'basic', 'professional', 'multichannel', 'enterprise'];

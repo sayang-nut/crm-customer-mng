@@ -1,5 +1,5 @@
 'use strict';
-
+require('module-alias/register');
 /**
  * Error Middleware
  * ─────────────────────────────────────────────────────────────────
@@ -9,6 +9,7 @@
  */
 
 const logger = require('@config/logger');
+const { default: moduleAlias } = require('module-alias');
 
 // AppError – Operational errors (expected, safe to send to client)
 

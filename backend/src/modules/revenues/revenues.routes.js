@@ -20,15 +20,15 @@
  * DELETE /api/revenues/:id      Admin only  – Xóa
  * ─────────────────────────────────────────────────────────────────
  */
-
+require('module-alias/register');
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const router = express.Router();
 
 const ctrl = require('./revenues.controller');
-const { authenticate, isAdmin, authorize, allRoles } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
-const { ROLES, PAYMENT_METHOD } = require('../../config/constants');
+const { authenticate, isAdmin, authorize, allRoles } = require('@middleware/auth/auth');
+const { validate } = require('@middleware/auth/validate');
+const { ROLES, PAYMENT_METHOD } = require('@config/constants');
 
 const VALID_METHODS = Object.values(PAYMENT_METHOD);
 const WRITE_ROLES   = [ROLES.ADMIN, ROLES.SALES];

@@ -22,7 +22,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-const svc = require('./customers.service');
+const svc = require('./service');
 
 const list = async (req, res, next) => {
   try {

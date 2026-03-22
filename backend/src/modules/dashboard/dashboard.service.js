@@ -1,5 +1,6 @@
-const sequelize = require('../../config/database');
-const { ROLES } = require('../../config/constants');
+require('module-alias/register');
+const sequelize = require('@config/database');
+const { ROLES } = require('@config/constants');
 
 const getAdminDashboard = async () => {
   const [[customerStats]] = await sequelize.query(`

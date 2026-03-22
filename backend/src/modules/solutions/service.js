@@ -1,5 +1,5 @@
 'use strict';
-
+require('module-alias/register');
 /**
  * @file     backend/src/modules/solutions/solutions.service.js
  * @location backend/src/modules/solutions/solutions.service.js
@@ -26,11 +26,10 @@
  *     togglePackageStatus, deletePackage
  * ─────────────────────────────────────────────────────────────────
  */
-import 'module-alias/register';
-import { query } from '@config/database';
-import { AppError } from '@/middleware/error';
-import { info } from '@config/logger';
-
+ 
+const { query } = require('@config/database');
+const { AppError } = require('@middleware/error');  
+const { info } = require('@config/logger');
 // INDUSTRIES
 
 const listIndustries = async () => {
@@ -365,7 +364,7 @@ const deletePackage = async (id) => {
   await query(`DELETE FROM service_packages WHERE id = ?`, { replacements: [Number(id)] });
 };
 
-export default {
+module.exports = {
   // Industries
   listIndustries, createIndustry, updateIndustry, deleteIndustry,
   // Groups

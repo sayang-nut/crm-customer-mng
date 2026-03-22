@@ -1,13 +1,8 @@
 'use strict';
-require('module-alias/register');
-// ─────────────────────────────────────────────────────────────────
-// @file    backend/src/app.js
-// @module  Module 1 – Auth
-// ─────────────────────────────────────────────────────────────────
 
 require('dotenv').config();
 require('express-async-errors');          // Bắt async error tự động, không cần try/catch
-
+require('module-alias/register');           
 const express      = require('express');
 const cors         = require('cors');
 const helmet       = require('helmet');
@@ -20,15 +15,18 @@ const logger       = require('@config/logger');
 const { errorHandler } = require('@middleware/error');
 
 // ── Route imports ─────────────────────────────────────────────────
-const authRoutes          = require('@modules/auth/routes');
-const usersRoutes         = require('@modules/users/routes');
-//const customersRoutes     = require('@modules/customers/routes');
-//const solutionsRoutes     = require('@modules/solutions/routes');
-//const contractsRoutes     = require('@modules/contracts/routes');
-//const ticketsRoutes       = require('@modules/tickets/routes');
-//const revenuesRoutes      = require('@modules/revenues/routes');
-//const dashboardRoutes     = require('@modules/dashboard/routes');
-//const notificationsRoutes = require('@modules/notifications/routes');
+const authRoutes          = require('./modules/auth/routes');
+const usersRoutes         = require('./modules/users/routes');
+const customersRoutes     = require('./modules/customers/routes');
+const solutionsRoutes     = require('./modules/solutions/routes');
+const contractsRoutes     = require('./modules/contracts/contracts.routes');
+const ticketsRoutes       = require('./modules/tickets/tickets.routes');
+const revenuesRoutes      = require('./modules/revenues/revenues.routes');
+const dashboardRoutes     = require('./modules/dashboard/dashboard.routes');
+
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
+
+console.log('✅ Dashboard routes loaded:', dashboardRoutes);
 
 const app = express();
 
@@ -58,33 +56,33 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Rate limiters ─────────────────────────────────────────────────
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 phút
-  max: 20,
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 20 : 1000, // ← dev = không giới hạn thực tế
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (req) => process.env.NODE_ENV !== 'production', // ← SKIP hoàn toàn khi dev
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,    // 1 phút
+  windowMs: 1 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Quá nhiều yêu cầu. Vui lòng thử lại sau.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (req) => process.env.NODE_ENV !== 'production', // ← SKIP hoàn toàn khi dev
 });
 
 // ── API Routes ────────────────────────────────────────────────────
 app.use('/api/auth',          authLimiter, authRoutes);
 app.use('/api/users',         apiLimiter,  usersRoutes);
-// app.use('/api/customers',     apiLimiter,  customersRoutes);
-// app.use('/api/solutions',     apiLimiter,  solutionsRoutes);
-// app.use('/api/contracts',     apiLimiter,  contractsRoutes);
-// app.use('/api/tickets',       apiLimiter,  ticketsRoutes);
-//app.use('/api/revenues',      apiLimiter,  revenuesRoutes);
-//app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
-//app.use('/api/notifications', apiLimiter,  notificationsRoutes);
+app.use('/api/customers',     apiLimiter,  customersRoutes);
+app.use('/api/solutions',     apiLimiter,  solutionsRoutes);
+app.use('/api/contracts',     apiLimiter,  contractsRoutes);
+app.use('/api/tickets',       apiLimiter,  ticketsRoutes);
+app.use('/api/revenues',      apiLimiter,  revenuesRoutes);
+app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
+app.use('/api/notifications', apiLimiter,  notificationsRoutes);
 
 // ── Health check ──────────────────────────────────────────────────
 app.get('/health', (req, res) => {

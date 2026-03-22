@@ -23,15 +23,15 @@
  * LƯU Ý: /stats phải khai báo TRƯỚC /:id
  * ─────────────────────────────────────────────────────────────────
  */
-
+require('module-alias/register');
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const router = express.Router();
 
 const ctrl = require('./contracts.controller');
-const { authenticate, authorize, allRoles } = require('../../middleware/auth.middleware');
-const { validate } = require('../../middleware/validate.middleware');
-const { ROLES, CONTRACT_STATUS, BILLING_CYCLE } = require('../../config/constants');
+const { authenticate, authorize, allRoles } = require('@middleware/auth/auth');
+const { validate } = require('@middleware/auth/validate');
+const { ROLES, CONTRACT_STATUS, BILLING_CYCLE } = require('@config/constants');
 
 const VALID_STATUS  = Object.values(CONTRACT_STATUS);
 const VALID_CYCLE   = Object.values(BILLING_CYCLE);

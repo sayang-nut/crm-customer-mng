@@ -11,12 +11,12 @@
  * GET /api/dashboard/cskh   Admin+Manager+CSKH  – KPI CSKH cá nhân
  * ─────────────────────────────────────────────────────────────────
  */
-
+require('module-alias/register');
 const express = require('express');
 const router  = express.Router();
 const ctrl    = require('./dashboard.controller');
-const { authenticate, authorize } = require('../../middleware/auth.middleware');
-const { ROLES } = require('../../config/constants');
+const { authenticate, authorize } = require('@middleware/auth/auth');
+const { ROLES } = require('@config/constants');
 
 router.use(authenticate);
 router.get('/admin', authorize(ROLES.ADMIN, ROLES.MANAGER), ctrl.admin);

@@ -20,11 +20,11 @@
  *   getStats        – Thống kê nhanh: tháng này, năm này, tổng
  * ─────────────────────────────────────────────────────────────────
  */
-
-const sequelize    = require('../../config/database');
-const { AppError } = require('../../middleware/error.middleware');
-const logger       = require('../../config/logger');
-const { ROLES, PAYMENT_METHOD } = require('../../config/constants');
+require('module-alias/register');
+const sequelize    = require('@config/database');
+const { AppError } = require('@middleware/error');
+const logger       = require('@config/logger');
+const { ROLES, PAYMENT_METHOD } = require('@config/constants');
 
 const VALID_METHODS = Object.values(PAYMENT_METHOD);
 
