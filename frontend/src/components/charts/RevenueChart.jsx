@@ -1,3 +1,4 @@
+//src/components/charts/RevenueChart.jsx
 import React from 'react';
 import {
   LineChart,

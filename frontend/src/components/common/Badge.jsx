@@ -1,5 +1,5 @@
 import React from 'react';
-
+//src/components/common/Badge.jsx
 const Badge = ({ children, variant = 'primary', dot = false, className = '' }) => {
   const variantClasses = {
     primary: 'badge-primary',

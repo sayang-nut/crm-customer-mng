@@ -1,7 +1,7 @@
 import React from 'react';
 import { Inbox } from 'lucide-react';
 import Button from './Button';
-
+//src/components/common/EmptyState.jsx
 const EmptyState = ({
   icon: Icon = Inbox,
   title = 'Không có dữ liệu',

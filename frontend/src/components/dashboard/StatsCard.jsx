@@ -1,3 +1,4 @@
+//src/components/dashboard/StatsCard.jsx
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 

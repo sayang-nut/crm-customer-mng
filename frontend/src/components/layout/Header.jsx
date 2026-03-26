@@ -1,3 +1,4 @@
+//src/components/layout/Header.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Search,

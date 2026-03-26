@@ -1,3 +1,4 @@
+//src/components/common/Toast.jsx
 import React, { useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';

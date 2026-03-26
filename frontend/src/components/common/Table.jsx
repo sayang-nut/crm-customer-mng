@@ -1,3 +1,4 @@
+//src/components/common/Table.jsx
 import React from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
