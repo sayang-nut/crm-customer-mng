@@ -1,15 +1,10 @@
 /**
- * @file     frontend/src/pages/dashboard/DashboardPage.jsx
- * @location frontend/src/pages/dashboard/DashboardPage.jsx
+ * @file      frontend/src/pages/dashboard/DashboardPage.jsx
+ * @location  frontend/src/pages/dashboard/
+ * @theme     WHITE PLAIN - Sync Header/Sidebar/MainLayout
  * ─────────────────────────────────────────────────────────────────
- * @requires ../../services/dashboardService
- * @requires ../../store/authContext → useAuth
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: Trang Dashboard – hiển thị KPI theo role.
- *   Admin/Manager → Admin Dashboard (full overview)
- *   Sales         → Sales Dashboard (my KPIs)
- *   CSKH          → CSKH Dashboard (my tickets)
- * ─────────────────────────────────────────────────────────────────
+ * VAI TRÒ: Trang Dashboard – KPI theo role (Admin/Sales/CSKH)
+ * ✅ LOGIC 100% GIỮ NGUYÊN | UI WHITE PLAIN | RESPONSIVE
  */
 
 import { useState, useEffect } from 'react';
@@ -58,10 +53,10 @@ const DashboardPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px] bg-white">
         <div className="text-center space-y-4">
           <div className="spinner w-12 h-12 text-primary-500 mx-auto" />
-          <p className="text-gray-400 text-lg">Đang tải...</p>
+          <p className="text-gray-600 text-lg font-medium">Đang tải...</p>
         </div>
       </div>
     );
@@ -77,17 +72,20 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header - 100% Tailwind */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-6 border-b border-white/10">
-        <div>
-          <h1 className="text-4xl font-black bg-gradient-to-r from-primary-400 via-blue-300 to-accent-400 bg-clip-text text-transparent tracking-tight drop-shadow-lg">
-            Dashboard
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Xin chào, <span className="font-semibold text-white">{user?.fullName}</span> ·{' '}
-            <Badge variant="primary">{roleName[user?.role]}</Badge>
+    <div className="bg-white min-h-full space-y-8 p-1">  {/* ✅ WHITE CONTAINER */}
+      
+      {/* Header - WHITE PLAIN */}
+      <header className="space-y-2 pb-8 border-b border-gray-200">
+        <h1 className="text-4xl font-black text-dark-900 tracking-tight">
+          Dashboard  {/* ✅ BLACK TEXT - visible */}
+        </h1>
+        <div className="flex flex-wrap items-center gap-4">
+          <p className="text-gray-700 text-lg font-medium">
+            Xin chào, <span className="font-bold text-dark-900">{user?.fullName}</span>
           </p>
+          <Badge variant="primary" className="!bg-primary-100 !text-primary-800">
+            {roleName[user?.role]}
+          </Badge>
         </div>
       </header>
 
@@ -99,10 +97,10 @@ const DashboardPage = () => {
   );
 };
 
-// ✅ ADMIN DASHBOARD - StatsCard + Card + Badge
+// ✅ ADMIN DASHBOARD - WHITE PLAIN
 const AdminDashboard = ({ data }) => (
   <div className="space-y-8">
-    {/* KPI Grid - Responsive */}
+    {/* KPI Grid */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       <StatsCard 
         title="Khách hàng" 
@@ -155,27 +153,27 @@ const AdminDashboard = ({ data }) => (
       </StatsCard>
     </div>
 
-    {/* Expiring Contracts Table */}
+    {/* Expiring Contracts - LIGHT YELLOW */}
     {data.expiringContracts?.length > 0 && (
-      <Card className="!bg-gradient-to-r !from-yellow-500/10 !to-orange-500/10 !border-yellow-500/30">
-        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-yellow-500/20">
-          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-          <h3 className="text-xl font-bold text-yellow-100">
+      <Card className="border border-yellow-200 bg-yellow-50 shadow-sm">
+        <div className="flex items-center gap-3 p-6 mb-6">
+          <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse flex-shrink-0" />
+          <h3 className="text-xl font-bold text-yellow-900">
             Hợp đồng sắp hết hạn (30 ngày) - {data.expiringContracts.length}
           </h3>
         </div>
         
-        <div className="divide-y divide-white/10">
-          {data.expiringContracts.slice(0, 5).map((c) => (  // ✅ Limit 5 items
-            <div key={c.id} className="flex items-center justify-between py-4 hover:bg-white/5 rounded-lg transition-colors">
-              <div className="space-y-1 min-w-0">
-                <code className="text-sm font-mono text-primary-400 bg-primary-500/10 px-2 py-1 rounded-lg">
+        <div className="divide-y divide-yellow-200">
+          {data.expiringContracts.slice(0, 5).map((c) => (
+            <div key={c.id} className="flex items-center justify-between py-4 px-6 hover:bg-yellow-25 rounded-lg transition-colors">
+              <div className="space-y-1">
+                <code className="text-sm font-mono bg-primary-100 text-primary-700 px-2 py-1 rounded font-medium">
                   {c.contract_number}
                 </code>
-                <div className="text-sm font-medium text-white truncate">{c.company_name}</div>
+                <div className="text-sm font-semibold text-dark-900 truncate">{c.company_name}</div>
               </div>
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-gray-400">{c.sales_name}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">{c.sales_name}</span>
                 <Badge 
                   variant={c.days_left <= 7 ? 'danger' : 'warning'}
                   size="sm"
@@ -186,7 +184,7 @@ const AdminDashboard = ({ data }) => (
             </div>
           ))}
           {data.expiringContracts.length > 5 && (
-            <div className="text-center py-4 text-gray-400 text-sm">
+            <div className="text-center py-6 text-gray-500 text-sm font-medium">
               +{data.expiringContracts.length - 5} hợp đồng khác
             </div>
           )}
@@ -196,7 +194,7 @@ const AdminDashboard = ({ data }) => (
   </div>
 );
 
-// ✅ SALES DASHBOARD (tương tự)
+// ✅ SALES DASHBOARD - WHITE PLAIN
 const SalesDashboard = ({ data }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -208,7 +206,7 @@ const SalesDashboard = ({ data }) => (
         icon={Users}
         color="primary"
       >
-        <div className="flex gap-2 mt-2">
+        <div className="flex flex-wrap gap-2 mt-2">
           <Badge variant="info">{data.myCustomers?.lead || 0} lead</Badge>
           <Badge variant="success">{data.myCustomers?.active || 0} active</Badge>
         </div>
@@ -224,18 +222,20 @@ const SalesDashboard = ({ data }) => (
       />
     </div>
 
-    {/* My Expiring Contracts */}
+    {/* My Expiring Contracts - LIGHT ORANGE */}
     {data.myExpiringContracts?.length > 0 && (
-      <Card className="!bg-gradient-to-r !from-orange-500/10 !to-red-500/10 !border-orange-500/30">
-        <h3 className="text-xl font-bold text-orange-100 mb-6">
+      <Card className="border border-orange-200 bg-orange-50 shadow-sm">
+        <h3 className="text-xl font-bold text-orange-900 p-6 border-b border-orange-200">
           Hợp đồng sắp hết hạn của tôi ({data.myExpiringContracts.length})
         </h3>
-        <div className="space-y-3">
+        <div className="divide-y divide-orange-200">
           {data.myExpiringContracts.map((c) => (
-            <div key={c.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+            <div key={c.id} className="flex items-center justify-between py-4 px-6 hover:bg-orange-25 rounded-lg transition-colors">
               <div>
-                <code className="text-primary-400 font-mono">{c.contract_number}</code>
-                <span className="ml-3 font-medium">{c.company_name}</span>
+                <code className="text-primary-700 font-mono bg-primary-100 px-2 py-1 rounded text-sm">
+                  {c.contract_number}
+                </code>
+                <span className="ml-3 font-semibold text-dark-900">{c.company_name}</span>
               </div>
               <Badge variant={c.days_left <= 7 ? 'danger' : 'warning'}>
                 Còn {c.days_left}n
@@ -248,7 +248,7 @@ const SalesDashboard = ({ data }) => (
   </div>
 );
 
-// ✅ CSKH DASHBOARD (tương tự)
+// ✅ CSKH DASHBOARD - WHITE PLAIN
 const CSKHDashboard = ({ data }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -280,19 +280,19 @@ const CSKHDashboard = ({ data }) => (
       />
     </div>
 
-    {/* My Overdue Tickets */}
+    {/* My Overdue Tickets - LIGHT RED */}
     {data.myOverdueTickets?.length > 0 && (
-      <Card className="!bg-gradient-to-r !from-red-500/10 !to-orange-500/10 !border-red-500/30">
-        <h3 className="text-xl font-bold text-red-100 mb-6">
+      <Card className="border border-red-200 bg-red-50 shadow-sm">
+        <h3 className="text-xl font-bold text-red-900 p-6 border-b border-red-200">
           Ticket stale của tôi ({data.myOverdueTickets.length})
         </h3>
-        <div className="space-y-3">
+        <div className="divide-y divide-red-200">
           {data.myOverdueTickets.map((t) => (
-            <div key={t.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+            <div key={t.id} className="flex items-center justify-between py-4 px-6 hover:bg-red-25 rounded-lg transition-colors">
               <div className="space-y-1">
-                <span className="text-sm text-gray-400">#{t.id}</span>
-                <span className="font-medium">{t.title}</span>
-                <span className="text-sm text-gray-400">· {t.company_name}</span>
+                <span className="text-sm font-medium text-dark-900">#{t.id}</span>
+                <span className="font-semibold text-dark-900 block">{t.title}</span>
+                <span className="text-sm text-gray-600">· {t.company_name}</span>
               </div>
               <Badge variant="warning">
                 {Math.floor(t.stale_hours)}h

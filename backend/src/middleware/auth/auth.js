@@ -1,28 +1,10 @@
 'use strict';
 require('module-alias/register');
-/**
- * Auth Middleware
- * ─────────────────────────────────────────────────────────────────
- * authenticate : Verify JWT access token, gán req.user
- * authorize    : Kiểm tra role (variadic, dùng spread ...roles)
- *
- * Shorthand exports:
- *   isAdmin          – chỉ admin
- *   isAdminOrManager – admin | manager
- *   isAdminOrSales   – admin | sales
- *   isSalesOrCSKH    – sales | cskh
- *   notTechnical     – mọi role trừ technical
- *   allRoles         – tất cả 5 roles
- * ─────────────────────────────────────────────────────────────────
- */
 
 const jwt = require('jsonwebtoken');
 const { ROLES } = require('@config/constants');
 const { AppError } = require('../error');
 
-// ─────────────────────────────────────────────────────────────────
-// authenticate – Xác minh access token
-// ─────────────────────────────────────────────────────────────────
 const authenticate = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 

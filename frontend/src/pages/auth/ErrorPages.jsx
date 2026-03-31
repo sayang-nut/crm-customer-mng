@@ -15,15 +15,7 @@
 
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/authContext';
-
-// Redirect home theo role (khớp với ROLE_HOME trong App.jsx)
-const ROLE_HOME = {
-  admin:     '/dashboard',
-  manager:   '/dashboard',
-  sales:     '/customers',
-  cskh:      '/tickets',
-  technical: '/tickets',
-};
+import { ROLE_HOME } from '../../constants';
 
 const ErrorLayout = ({ code, title, description, action }) => (
   <>

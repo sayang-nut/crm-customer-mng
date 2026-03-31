@@ -4,14 +4,7 @@ import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../store/authContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
-
-const ROLE_DASHBOARD = {
-  admin: '/dashboard',
-  manager: '/dashboard',
-  sales: '/dashboard/sales',
-  cskh: '/dashboard/cskh',
-  technical: '/tickets',
-};
+import { ROLE_HOME } from '../../constants';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -39,7 +32,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const dest = ROLE_DASHBOARD[user.role] || '/dashboard';
+      const dest = ROLE_HOME[user.role] || '/dashboard';
       navigate(dest, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
@@ -54,7 +47,7 @@ const LoginPage = () => {
     setError('');
     try {
       const result = await login(email.trim(), password);
-      const dest = ROLE_DASHBOARD[result.user.role] || '/dashboard';
+      const dest = ROLE_HOME[result.user.role] || '/dashboard';
       navigate(dest, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác.');
