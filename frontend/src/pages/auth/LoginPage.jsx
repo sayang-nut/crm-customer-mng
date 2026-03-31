@@ -138,23 +138,7 @@ const LoginPage = () => {
           </Button>
         </form>
 
-        {/* Tài khoản Demo */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <p className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Tài khoản mẫu</p>
-          <div className="grid grid-cols-2 gap-2">
-            {['admin', 'manager', 'sales', 'cskh'].map((role) => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => { setEmail(`${role}@bado.vn`); setPassword('Bado@123'); }}
-                className="text-left px-3 py-2 border border-slate-100 rounded-md hover:bg-slate-50 transition-colors"
-              >
-                <div className="text-[10px] font-bold text-slate-400 uppercase">{role}</div>
-                <div className="text-xs text-slate-600 truncate">{role}@bado.vn</div>
-              </button>
-            ))}
-          </div>
-        </div>
+        
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-slate-400">

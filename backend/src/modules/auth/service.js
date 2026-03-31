@@ -73,7 +73,7 @@ const writeLoginLog = async (userId, status, ip, ua) => {
  */
 const login = async (email, password, ipAddress, userAgent) => {
   const [[user]] = await sequelize.query(
-    `SELECT id, full_name, email, password_hash, role, status, avatar_url, telegram_chat_id
+    `SELECT id, full_name, email, password_hash, role, status, avatar_url
      FROM users WHERE email = ? LIMIT 1`,
     { replacements: [email.toLowerCase().trim()] }
   );
@@ -114,7 +114,6 @@ const login = async (email, password, ipAddress, userAgent) => {
       email:          user.email,
       role:           user.role,
       avatarUrl:      user.avatar_url,
-      telegramChatId: user.telegram_chat_id,
     },
   };
 };
@@ -186,7 +185,7 @@ const logout = async (userId) => {
 const getMe = async (userId) => {
   const [[user]] = await sequelize.query(
     `SELECT id, full_name, email, role, status, avatar_url,
-            telegram_chat_id, last_login_at, created_at
+            last_login_at, created_at
      FROM users WHERE id = ? LIMIT 1`,
     { replacements: [userId] }
   );
@@ -200,7 +199,6 @@ const getMe = async (userId) => {
     role:           user.role,
     status:         user.status,
     avatarUrl:      user.avatar_url,
-    telegramChatId: user.telegram_chat_id,
     lastLoginAt:    user.last_login_at,
     createdAt:      user.created_at,
   };

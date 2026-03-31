@@ -84,6 +84,10 @@ export default {
         '88': '22rem',
         '128': '32rem',
       },
+
+
+
+      
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in',
         'slide-up': 'slideUp 0.3s ease-out',
