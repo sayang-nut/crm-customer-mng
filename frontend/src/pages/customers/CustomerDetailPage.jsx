@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   fetchCustomerById, deleteCustomer, clearCurrentCustomer,
 } from '../../store/slices/customerSlice';
-import { addNotification } from '../../store/slices/notificationSlice';
+import toast from 'react-hot-toast';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Card from '../../components/common/Card';
@@ -33,18 +33,10 @@ const CustomerDetailPage = () => {
   const handleDelete = async () => {
     try {
       await dispatch(deleteCustomer(id)).unwrap();
-      dispatch(addNotification({
-        type: 'success',
-        title: 'Xóa thành công',
-        message: `Khách hàng ${currentCustomer.company_name} đã được xóa`,
-      }));
+      toast.success(`Khách hàng ${currentCustomer.company_name} đã được xóa`);
       navigate('/customers');
     } catch (error) {
-      dispatch(addNotification({
-        type: 'error',
-        title: 'Xóa thất bại',
-        message: error.message || 'Có lỗi xảy ra khi xóa khách hàng',
-      }));
+      toast.error(error.message || 'Có lỗi xảy ra khi xóa khách hàng');
     }
   };
 
@@ -79,6 +71,30 @@ const CustomerDetailPage = () => {
 
   const statusConfig = getStatusConfig(currentCustomer.status);
   const StatusIcon = statusConfig.icon;
+
+  const industry = currentCustomer.industry || currentCustomer.industry_name || 'Chưa cập nhật';
+  const primaryContact =
+    currentCustomer.contacts?.find((ct) => ct.is_primary === 1) ||
+    currentCustomer.contacts?.[0] ||
+    {};
+
+  const representativeName =
+    currentCustomer.representative_name ||
+    currentCustomer.representative_name ||
+    primaryContact.full_name ||
+    'Chưa cập nhật';
+  const representativePosition =
+    currentCustomer.representative_position ||
+    primaryContact.notes ||
+    'Chưa cập nhật';
+  const representativeEmail =
+    currentCustomer.email ||
+    primaryContact.email ||
+    'Chưa cập nhật';
+  const representativePhone =
+    currentCustomer.phone ||
+    primaryContact.phone ||
+    'Chưa cập nhật';
 
   // Mock data (giữ nguyên)
   const contracts = [{ id: 1, solution: 'Bado Retail', package: 'Gói Chuyên nghiệp', startDate: '2024-01-01', endDate: '2024-12-31', value: 15000000, status: 'active' }];
@@ -128,7 +144,7 @@ const CustomerDetailPage = () => {
                 </span>
                 <span className="text-sm text-gray-500">•</span>
                 <span className="text-sm text-gray-600 font-medium">
-                  {currentCustomer.industry}
+                  {industry}
                 </span>
               </div>
             </div>
@@ -260,7 +276,7 @@ const CustomerDetailPage = () => {
                     </label>
                     <p className="text-lg font-semibold text-dark-900 flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-500" />
-                      {currentCustomer.representative_name}
+                      {representativeName}
                     </p>
                   </div>
                   <div>
@@ -268,7 +284,7 @@ const CustomerDetailPage = () => {
                       Chức vụ
                     </label>
                     <p className="text-lg font-semibold text-dark-900">
-                      {currentCustomer.representative_position}
+                      {representativePosition}
                     </p>
                   </div>
                   <div>
@@ -276,11 +292,11 @@ const CustomerDetailPage = () => {
                       Email
                     </label>
                     <a
-                      href={`mailto:${currentCustomer.email}`}
+                      href={`mailto:${representativeEmail}`}
                       className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
                     >
                       <Mail className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                      {currentCustomer.email}
+                      {representativeEmail}
                     </a>
                   </div>
                   <div>
@@ -288,7 +304,7 @@ const CustomerDetailPage = () => {
                       Số điện thoại
                     </label>
                     <a
-                      href={`tel:${currentCustomer.phone}`}
+                      href={`tel:${representativePhone}`}
                       className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
                     >
                       <Phone className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />

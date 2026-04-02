@@ -1,3 +1,4 @@
+import { Toaster } from 'react-hot-toast';
 
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -26,6 +27,8 @@ import RevenuesPage     from './pages/revenues/RevenuesPage';
 import DashboardPage    from './pages/dashboard/DashboardPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import { ROLE_HOME } from './constants';
+
+
 
 // ── RoleRedirect - Loading Trắng ──────────────────────────────────
 const RoleRedirect = () => {
@@ -109,6 +112,33 @@ const App = () => (
   <Provider store={store}>
     <BrowserRouter>
       <AuthProvider>
+        <Toaster 
+          position="top-center" 
+          reverseOrder={false}
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#fff',
+              color: '#333',
+              borderRadius: '0px', 
+              border: '1px solid #e2e8f0',
+              fontSize: '14px',
+              fontWeight: '500',
+            },
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

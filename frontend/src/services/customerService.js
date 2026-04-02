@@ -119,8 +119,11 @@ function _mapToBackend(data) {
     tax_code:                 'taxCode',
     industry_id:              'industryId',
     assigned_to:              'assignedTo',
-    // representative_name/position KHÔNG phải field của customer
-    // → phải tạo qua addContact() riêng
+    representative_name:      'representativeName',
+    representative_position:  'representativePosition',
+    // Lưu email và phone vào contact nếu được gửi, hoặc customer record sẽ không dùng
+    email:                    'email',
+    phone:                    'phone',
   };
 
   const result = {};

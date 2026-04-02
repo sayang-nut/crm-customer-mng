@@ -11,7 +11,7 @@ import {
   updateCustomer,
   clearCurrentCustomer,
 } from '../../store/slices/customerSlice';
-import { addNotification } from '../../store/slices/notificationSlice';
+import toast from 'react-hot-toast';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
@@ -120,45 +120,21 @@ const CustomerFormPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      dispatch(
-        addNotification({
-          type: 'error',
-          title: 'Lỗi validation',
-          message: 'Vui lòng kiểm tra lại thông tin nhập vào',
-        })
-      );
+      toast.error('Vui lòng kiểm tra lại thông tin nhập vào');
       return;
     }
     setSubmitting(true);
     try {
       if (isEditMode) {
         await dispatch(updateCustomer({ id, data: formData })).unwrap();
-        dispatch(
-          addNotification({
-            type: 'success',
-            title: 'Cập nhật thành công',
-            message: `Khách hàng ${formData.company_name} đã được cập nhật`,
-          })
-        );
+        toast.success(`Khách hàng ${formData.company_name} đã được cập nhật`);
       } else {
         await dispatch(createCustomer(formData)).unwrap();
-        dispatch(
-          addNotification({
-            type: 'success',
-            title: 'Thêm thành công',
-            message: `Khách hàng ${formData.company_name} đã được thêm vào hệ thống`,
-          })
-        );
+        toast.success(`Khách hàng ${formData.company_name} đã được thêm vào hệ thống`);
       }
       navigate('/customers');
     } catch (error) {
-      dispatch(
-        addNotification({
-          type: 'error',
-          title: isEditMode ? 'Cập nhật thất bại' : 'Thêm thất bại',
-          message: error.message || 'Có lỗi xảy ra, vui lòng thử lại',
-        })
-      );
+      toast.error(error.message || 'Có lỗi xảy ra, vui lòng thử lại');
     } finally {
       setSubmitting(false);
     }

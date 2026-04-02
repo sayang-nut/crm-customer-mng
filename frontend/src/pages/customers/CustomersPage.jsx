@@ -26,7 +26,7 @@ import {
   clearFilters,
   setPage,
 } from '../../store/slices/customerSlice';
-import { addNotification } from '../../store/slices/notificationSlice';
+import toast from 'react-hot-toast';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Badge from '../../components/common/Badge';
@@ -80,23 +80,11 @@ const CustomersPage = () => {
   const handleConfirmDelete = async () => {
     try {
       await dispatch(deleteCustomer(customerToDelete.id)).unwrap();
-      dispatch(
-        addNotification({
-          type: 'success',
-          title: 'Xóa thành công',
-          message: `Khách hàng ${customerToDelete.company_name} đã được xóa`,
-        })
-      );
+      toast.success(`Khách hàng ${customerToDelete.company_name} đã được xóa`);
       setShowDeleteModal(false);
       setCustomerToDelete(null);
     } catch (error) {
-      dispatch(
-        addNotification({
-          type: 'error',
-          title: 'Xóa thất bại',
-          message: error.message || 'Có lỗi xảy ra khi xóa khách hàng',
-        })
-      );
+      toast.error(error.message || 'Có lỗi xảy ra khi xóa khách hàng');
     }
   };
 
