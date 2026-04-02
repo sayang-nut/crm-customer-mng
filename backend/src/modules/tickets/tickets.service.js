@@ -214,8 +214,8 @@ const createTicket = async (data, userId) => {
     }
   );
 
-  logger.info(`[TICKETS] Created ticket id=${result.insertId} by user=${userId}`);
-  return _getById(result.insertId);
+  logger.info(`[TICKETS] Created ticket id=${result} by user=${userId}`);
+  return _getById(result);
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -353,7 +353,7 @@ const addComment = async (ticketId, userId, content, isInternal = false) => {
     `SELECT tc.*, u.full_name, u.role
      FROM ticket_comments tc JOIN users u ON u.id = tc.user_id
      WHERE tc.id = ? LIMIT 1`,
-    { replacements: [result.insertId] }
+    { replacements: [result] }
   );
   return comment;
 };
@@ -402,7 +402,7 @@ const addAttachment = async (ticketId, userId, { fileName, fileUrl, fileSize, mi
     { replacements: [Number(ticketId)] }
   );
 
-  return { id: result.insertId, fileName, fileUrl };
+  return { id: result, fileName, fileUrl };
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -429,7 +429,7 @@ const createType = async ({ name, code }) => {
     `INSERT INTO ticket_types (name, code) VALUES (?, ?)`,
     { replacements: [name.trim(), code.trim()] }
   );
-  return { id: result.insertId, name: name.trim(), code: code.trim() };
+  return { id: result, name: name.trim(), code: code.trim() };
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -441,31 +441,31 @@ const getStats = async (user) => {
   const where = conds.join(' AND ');
 
   const [[stats]] = await sequelize.query(
-    `SELECT
-       COUNT(*)                              AS total,
-       SUM(t.status = 'open')               AS open,
-       SUM(t.status = 'processing')         AS processing,
-       SUM(t.status = 'resolved')           AS resolved,
-       SUM(t.status = 'closed')             AS closed,
-       SUM(t.priority = 'urgent')           AS urgent,
-       SUM(t.priority = 'high')             AS high_priority,
-       SUM(TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) >= 36
-           AND t.status IN ('open','processing')) AS stale
-     FROM tickets t
-     JOIN customers cu ON cu.id = t.customer_id
-     WHERE ${where}`,
-    { replacements: params }
-  );
+  `SELECT
+      COUNT(*) AS \`total\`,
+      SUM(CASE WHEN t.status = 'open' THEN 1 ELSE 0 END) AS \`open\`,
+      SUM(CASE WHEN t.status = 'processing' THEN 1 ELSE 0 END) AS \`processing\`,
+      SUM(CASE WHEN t.status = 'resolved' THEN 1 ELSE 0 END) AS \`resolved\`,
+      SUM(CASE WHEN t.status = 'closed' THEN 1 ELSE 0 END) AS \`closed\`,
+      SUM(CASE WHEN t.priority = 'urgent' THEN 1 ELSE 0 END) AS \`urgent\`,
+      SUM(CASE WHEN t.priority = 'high' THEN 1 ELSE 0 END) AS \`high_priority\`,
+      SUM(CASE WHEN TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) >= 36 
+                AND t.status IN ('open','processing') THEN 1 ELSE 0 END) AS \`stale\`
+   FROM tickets t
+   JOIN customers cu ON cu.id = t.customer_id
+   WHERE ${where}`,
+  { replacements: params }
+);
 
   return {
-    total:       Number(stats.total),
-    open:        Number(stats.open),
-    processing:  Number(stats.processing),
-    resolved:    Number(stats.resolved),
-    closed:      Number(stats.closed),
-    urgent:      Number(stats.urgent),
-    highPriority:Number(stats.high_priority),
-    stale:       Number(stats.stale),
+    total:        Number(stats.total || 0),
+    open:         Number(stats.open || 0),
+    processing:   Number(stats.processing || 0),
+    resolved:     Number(stats.resolved || 0),
+    closed:       Number(stats.closed || 0),
+    urgent:       Number(stats.urgent || 0),
+    highPriority: Number(stats.high_priority || 0),
+    stale:        Number(stats.stale || 0),
   };
 };
 

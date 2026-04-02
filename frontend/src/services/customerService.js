@@ -25,8 +25,13 @@ const customerService = {
    * Danh sách khách hàng có filter + phân trang.
    * @param {{ page, limit, status, industryId, assignedTo, source, search }} params
    */
-  getCustomers: (params = {}) =>
-    api.get('/api/customers', { params }),
+  getCustomers: (params = {}) => {
+    // Lọc bỏ các tham số rỗng/null/undefined để tránh url bị thừa và lỗi validation
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    return api.get('/api/customers', { params: cleanParams });
+  },
 
   /** Chi tiết 1 khách hàng (kèm contacts) */
   getCustomerById: (id) =>
@@ -121,7 +126,7 @@ function _mapToBackend(data) {
   const result = {};
   for (const [key, value] of Object.entries(data)) {
     const beKey = map[key] || key;  // giữ nguyên nếu không cần map
-    if (value !== undefined) result[beKey] = value;
+    if (value !== undefined && value !== null && value !== '') result[beKey] = value;
   }
   return result;
 }

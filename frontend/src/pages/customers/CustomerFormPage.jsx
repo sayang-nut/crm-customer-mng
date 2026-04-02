@@ -1,7 +1,5 @@
-/**
- * @file     frontend/src/pages/customers/CustomerFormPage.jsx
- * @theme    WHITE PLAIN - No effects, no rounded, sync Header
- */
+// frontend/src/pages/customers/CustomerFormPage.jsx
+
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -196,7 +194,6 @@ const CustomerFormPage = () => {
         </p>
       </div>
 
-      {/* Form - NO ROUNDED, NO SHADOW */}
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form Area */}
@@ -331,7 +328,6 @@ const CustomerFormPage = () => {
                   onChange={handleChange}
                   error={errors.email}
                   required
-                  placeholder="example@company.com"
                   className="!rounded-none !border-gray-300"
                 />
                 <Input
@@ -342,7 +338,6 @@ const CustomerFormPage = () => {
                   onChange={handleChange}
                   error={errors.phone}
                   required
-                  placeholder="0901234567"
                   className="!rounded-none !border-gray-300"
                 />
               </div>

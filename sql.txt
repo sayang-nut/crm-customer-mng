@@ -1,0 +1,531 @@
+CREATE database if not exists crm_customer;
+use crm_customer;
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+SET time_zone = '+07:00';
+
+-- ----------------------------------------------------------------
+-- 1. users
+--    Nhân viên nội bộ sử dụng hệ thống CRM.
+--    Roles: admin | manager | sales | cskh | technical
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `users` (
+  `id`               INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `full_name`        VARCHAR(100)    NOT NULL                    COMMENT 'Họ và tên đầy đủ',
+  `email`            VARCHAR(150)    NOT NULL                    COMMENT 'Email đăng nhập – unique',
+  `password_hash`    VARCHAR(255)    NOT NULL                    COMMENT 'bcrypt hash',
+  `role`             ENUM(
+                       'admin',
+                       'manager',
+                       'sales',
+                       'cskh',
+                       'technical'
+                     )               NOT NULL                    COMMENT 'Vai trò phân quyền',
+  `avatar_url`       VARCHAR(500)    NULL                        COMMENT 'URL ảnh đại diện',
+  `status`           ENUM(
+                       'active',
+                       'inactive',
+                       'locked'
+                     )               NOT NULL DEFAULT 'active'   COMMENT 'active=đang dùng | inactive=chưa kích hoạt | locked=bị khóa',
+  `refresh_token`    VARCHAR(500)    NULL                        COMMENT 'JWT Refresh Token hiện tại (1 session)',
+  `last_login_at`    DATETIME        NULL                        COMMENT 'Thời điểm đăng nhập gần nhất',
+  `created_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_users_email`  (`email`),
+  KEY        `idx_users_role`   (`role`),
+  KEY        `idx_users_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Nhân viên nội bộ sử dụng CRM';
+
+-- ----------------------------------------------------------------
+-- 2. login_logs
+--    Ghi nhận mọi lần đăng nhập (thành công & thất bại).
+--    Phục vụ audit bảo mật, Admin giám sát.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `login_logs` (
+  `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`    INT UNSIGNED    NOT NULL                    COMMENT 'FK → users.id',
+  `status`     ENUM(
+                 'success',
+                 'failed'
+               )               NOT NULL                    COMMENT 'Kết quả đăng nhập',
+  `ip_address` VARCHAR(50)     NULL                        COMMENT 'IPv4/IPv6 của client',
+  `user_agent` VARCHAR(500)    NULL                        COMMENT 'Browser / device info',
+  `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_ll_user_id`    (`user_id`),
+  KEY `idx_ll_status`     (`status`),
+  KEY `idx_ll_created_at` (`created_at`),
+
+  CONSTRAINT `fk_ll_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Lịch sử đăng nhập hệ thống';
+
+-- ----------------------------------------------------------------
+-- 3. industries
+--    Danh mục ngành nghề của khách hàng doanh nghiệp.
+--    Ví dụ: Thời trang, Spa & Làm đẹp, Nhà hàng, …
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `industries` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(150) NOT NULL                    COMMENT 'Tên ngành nghề – unique',
+  `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_industries_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Danh mục ngành nghề kinh doanh của khách hàng';
+
+-- ----------------------------------------------------------------
+-- 4. solution_groups
+--    Nhóm giải pháp cấp cao nhất.
+--    Ví dụ: Bán lẻ | Lưu trú & Làm đẹp | Ăn uống & Giải trí
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `solution_groups` (
+  `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`        VARCHAR(150) NOT NULL           COMMENT 'Tên nhóm giải pháp',
+  `description` TEXT         NULL               COMMENT 'Mô tả ngắn về nhóm',
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Nhóm giải pháp phần mềm (cấp 1)';
+
+-- ----------------------------------------------------------------
+-- 5. solutions
+--    Loại giải pháp cụ thể, thuộc một nhóm.
+--    Ví dụ: Bado Retail, Bado Care, Bado FnB, Bado Hotel, …
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `solutions` (
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `solution_group_id` INT UNSIGNED NOT NULL           COMMENT 'FK → solution_groups.id',
+  `name`              VARCHAR(150) NOT NULL           COMMENT 'Tên giải pháp (thương hiệu sản phẩm)',
+  `description`       TEXT         NULL               COMMENT 'Mô tả đặc thù nghiệp vụ',
+  `created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_solutions_group` (`solution_group_id`),
+
+  CONSTRAINT `fk_solutions_group`
+    FOREIGN KEY (`solution_group_id`) REFERENCES `solution_groups` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Giải pháp phần mềm cụ thể (cấp 2)';
+
+-- ----------------------------------------------------------------
+-- 6. service_packages
+--    Gói dịch vụ theo từng giải pháp.
+--    level: support < basic < professional < multichannel
+--    Lưu cả giá tháng & năm, trạng thái đang bán / ngừng bán.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `service_packages` (
+  `id`            INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `solution_id`   INT UNSIGNED  NOT NULL                COMMENT 'FK → solutions.id',
+  `name`          VARCHAR(150)  NOT NULL                COMMENT 'Tên gói hiển thị (Bado Retail - Chuyên nghiệp)',
+  `level`         ENUM(
+                    'support',
+                    'basic',
+                    'professional',
+                    'multichannel'
+                  )             NOT NULL                COMMENT 'Cấp độ gói dịch vụ',
+  `price_monthly` DECIMAL(15,2) NOT NULL DEFAULT 0      COMMENT 'Giá niêm yết theo tháng (VNĐ)',
+  `price_yearly`  DECIMAL(15,2) NOT NULL DEFAULT 0      COMMENT 'Giá niêm yết theo năm (VNĐ)',
+  `description`   TEXT          NULL                    COMMENT 'Mô tả tính năng / phạm vi gói',
+  `status`        ENUM(
+                    'active',
+                    'inactive'
+                  )             NOT NULL DEFAULT 'active' COMMENT 'active=đang bán | inactive=ngừng bán',
+  `created_at`    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_sp_solution` (`solution_id`),
+  KEY `idx_sp_status`   (`status`),
+  KEY `idx_sp_level`    (`level`),
+
+  CONSTRAINT `fk_sp_solution`
+    FOREIGN KEY (`solution_id`) REFERENCES `solutions` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Gói dịch vụ của từng giải pháp';
+
+-- ----------------------------------------------------------------
+-- 7. customers
+--    Doanh nghiệp khách hàng.
+--    Vòng đời trạng thái: lead → active → expired (→ active khi tái ký)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `customers` (
+  `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `company_name` VARCHAR(200) NOT NULL           COMMENT 'Tên doanh nghiệp',
+  `tax_code`     VARCHAR(50)  NULL               COMMENT 'Mã số thuế – unique nếu có',
+  `address`      TEXT         NULL               COMMENT 'Địa chỉ đăng ký kinh doanh',
+  `industry_id`  INT UNSIGNED NULL               COMMENT 'FK → industries.id',
+  `website`      VARCHAR(255) NULL               COMMENT 'Website doanh nghiệp',
+  `source`       VARCHAR(100) NULL               COMMENT 'Nguồn KH: referral|cold_call|website|event|...',
+  `status`       ENUM(
+                   'lead',
+                   'active',
+                   'expired'
+                 )            NOT NULL DEFAULT 'lead' COMMENT 'lead=tiềm năng | active=đang dùng | expired=hết hạn',
+  `assigned_to`  INT UNSIGNED NULL               COMMENT 'FK → users.id (Sales phụ trách)',
+  `notes`        TEXT         NULL               COMMENT 'Ghi chú nội bộ tổng quan',
+  `created_by`   INT UNSIGNED NOT NULL           COMMENT 'FK → users.id (người tạo)',
+  `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_customers_tax_code` (`tax_code`),
+  KEY `idx_cust_status`      (`status`),
+  KEY `idx_cust_assigned_to` (`assigned_to`),
+  KEY `idx_cust_industry`    (`industry_id`),
+  KEY `idx_cust_created_by`  (`created_by`),
+
+  CONSTRAINT `fk_cust_industry`
+    FOREIGN KEY (`industry_id`) REFERENCES `industries` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_cust_assigned`
+    FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_cust_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Doanh nghiệp khách hàng';
+
+-- ----------------------------------------------------------------
+-- 8. contacts
+--    Các đầu mối liên hệ trong cùng một doanh nghiệp.
+--    Vai trò ghi vào notes (giám đốc, kế toán, IT, v.v.)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `contacts` (
+  `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `customer_id` INT UNSIGNED NOT NULL           COMMENT 'FK → customers.id',
+  `full_name`   VARCHAR(100) NOT NULL           COMMENT 'Họ tên đầu mối',
+  `phone`       VARCHAR(20)  NULL               COMMENT 'Số điện thoại',
+  `email`       VARCHAR(150) NULL               COMMENT 'Email liên hệ',
+  `notes`       TEXT         NULL               COMMENT 'Vai trò / ghi chú: Giám đốc, Kế toán, IT...',
+  `is_primary`  TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1 = liên hệ chính của doanh nghiệp',
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_contacts_customer` (`customer_id`),
+
+  CONSTRAINT `fk_contacts_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Đầu mối liên hệ trong doanh nghiệp khách hàng';
+
+-- ----------------------------------------------------------------
+-- 9. customer_status_history
+--    Lưu lịch sử đầy đủ mỗi lần trạng thái khách hàng thay đổi.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `customer_status_history` (
+  `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `customer_id` INT UNSIGNED    NOT NULL           COMMENT 'FK → customers.id',
+  `from_status` ENUM(
+                  'lead',
+                  'active',
+                  'expired'
+                )               NULL               COMMENT 'Trạng thái cũ (NULL = tạo mới)',
+  `to_status`   ENUM(
+                  'lead',
+                  'active',
+                  'expired'
+                )               NOT NULL           COMMENT 'Trạng thái mới',
+  `reason`      TEXT            NULL               COMMENT 'Lý do chuyển trạng thái',
+  `changed_by`  INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (người thực hiện)',
+  `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_csh_customer`   (`customer_id`),
+  KEY `idx_csh_created_at` (`created_at`),
+
+  CONSTRAINT `fk_csh_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_csh_changed_by`
+    FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Lịch sử chuyển trạng thái khách hàng';
+
+-- ----------------------------------------------------------------
+-- 10. contracts
+--     Hợp đồng dịch vụ.
+--     Gia hạn = UPDATE record này + INSERT contract_renewal_history.
+--     Các cột warn_*_sent phòng tránh gửi thông báo trùng.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `contracts` (
+  `id`                  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `contract_number`     VARCHAR(100)  NOT NULL               COMMENT 'Số hợp đồng – unique',
+  `customer_id`         INT UNSIGNED  NOT NULL               COMMENT 'FK → customers.id',
+  `solution_id`         INT UNSIGNED  NOT NULL               COMMENT 'FK → solutions.id',
+  `package_id`          INT UNSIGNED  NOT NULL               COMMENT 'FK → service_packages.id',
+  `billing_cycle`       ENUM(
+                          'monthly',
+                          'yearly'
+                        )             NOT NULL DEFAULT 'yearly' COMMENT 'Chu kỳ thanh toán',
+  `start_date`          DATE          NOT NULL               COMMENT 'Ngày bắt đầu hiệu lực',
+  `end_date`            DATE          NOT NULL               COMMENT 'Ngày hết hạn',
+  `value`               DECIMAL(15,2) NOT NULL               COMMENT 'Giá trị trước chiết khấu (VNĐ)',
+  `discount`            DECIMAL(5,2)  NOT NULL DEFAULT 0     COMMENT 'Chiết khấu (%)',
+  `final_value`         DECIMAL(15,2) NOT NULL               COMMENT 'Giá trị thực tế = value*(1-discount/100)',
+  `status`              ENUM(
+                          'active',
+                          'near_expired',
+                          'expired',
+                          'cancelled'
+                        )             NOT NULL DEFAULT 'active' COMMENT 'active | near_expired (≤7 ngày) | expired | cancelled',
+  `assigned_to`         INT UNSIGNED  NOT NULL               COMMENT 'FK → users.id (Sales ký kết)',
+  `notes`               TEXT          NULL                   COMMENT 'Ghi chú hợp đồng',
+  -- Cờ chống gửi thông báo trùng
+  `warn_30_sent`        TINYINT(1)    NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo 30 ngày',
+  `warn_7_sent`         TINYINT(1)    NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo 7 ngày',
+  `expired_remind_sent` TINYINT(1)    NOT NULL DEFAULT 0     COMMENT '1 = đã nhắc sau 24h hết hạn',
+  `created_by`          INT UNSIGNED  NOT NULL               COMMENT 'FK → users.id (người tạo HĐ)',
+  `created_at`          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_contracts_number`    (`contract_number`),
+  KEY        `idx_cont_customer`      (`customer_id`),
+  KEY        `idx_cont_status`        (`status`),
+  KEY        `idx_cont_end_date`      (`end_date`),
+  KEY        `idx_cont_assigned_to`   (`assigned_to`),
+  KEY        `idx_cont_solution`      (`solution_id`),
+
+  CONSTRAINT `fk_cont_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_cont_solution`
+    FOREIGN KEY (`solution_id`) REFERENCES `solutions` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_cont_package`
+    FOREIGN KEY (`package_id`) REFERENCES `service_packages` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_cont_assigned`
+    FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_cont_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Hợp đồng dịch vụ';
+
+-- ----------------------------------------------------------------
+-- 11. contract_renewal_history
+--     Lưu snapshot mỗi lần gia hạn / nâng cấp hợp đồng.
+--     Giúp xem lại toàn bộ quá trình gia hạn theo thứ tự thời gian.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `contract_renewal_history` (
+  `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `contract_id`    INT UNSIGNED    NOT NULL           COMMENT 'FK → contracts.id',
+  `old_end_date`   DATE            NOT NULL           COMMENT 'Ngày kết thúc trước khi gia hạn',
+  `new_end_date`   DATE            NOT NULL           COMMENT 'Ngày kết thúc mới',
+  `old_package_id` INT UNSIGNED    NULL               COMMENT 'Gói cũ (NULL = không đổi)',
+  `new_package_id` INT UNSIGNED    NULL               COMMENT 'Gói mới (NULL = giữ nguyên)',
+  `old_value`      DECIMAL(15,2)   NULL               COMMENT 'Giá trị cũ (VNĐ)',
+  `new_value`      DECIMAL(15,2)   NULL               COMMENT 'Giá trị mới (VNĐ)',
+  `renewed_by`     INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (Sales thực hiện)',
+  `notes`          TEXT            NULL               COMMENT 'Ghi chú gia hạn',
+  `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_crh_contract`   (`contract_id`),
+  KEY `idx_crh_created_at` (`created_at`),
+
+  CONSTRAINT `fk_crh_contract`
+    FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_crh_renewed_by`
+    FOREIGN KEY (`renewed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Lịch sử gia hạn / nâng cấp hợp đồng';
+
+-- ----------------------------------------------------------------
+-- 12. ticket_types
+--     Danh mục loại ticket – Admin cấu hình.
+--     Ví dụ: Kỹ thuật | Thanh toán | Hướng dẫn sử dụng | Khiếu nại
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ticket_types` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`       VARCHAR(100) NOT NULL           COMMENT 'Tên loại ticket hiển thị',
+  `code`       VARCHAR(50)  NOT NULL           COMMENT 'Mã code ngắn – unique (technical|payment|...)',
+  `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tt_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Danh mục loại ticket hỗ trợ';
+
+-- ----------------------------------------------------------------
+-- 13. tickets
+--     Yêu cầu hỗ trợ từ khách hàng.
+--     Vòng đời: open → processing → resolved → closed
+--     Auto-close: 48h sau khi resolved nếu không có phản hồi.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `tickets` (
+  `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title`                VARCHAR(300) NOT NULL               COMMENT 'Tiêu đề tóm tắt vấn đề',
+  `description`          TEXT         NOT NULL               COMMENT 'Mô tả chi tiết vấn đề',
+  `customer_id`          INT UNSIGNED NOT NULL               COMMENT 'FK → customers.id',
+  `contract_id`          INT UNSIGNED NULL                   COMMENT 'FK → contracts.id (tùy chọn)',
+  `ticket_type_id`       INT UNSIGNED NOT NULL               COMMENT 'FK → ticket_types.id',
+  `priority`             ENUM(
+                           'low',
+                           'medium',
+                           'high',
+                           'urgent'
+                         )            NOT NULL DEFAULT 'medium' COMMENT 'Mức độ ưu tiên xử lý',
+  `status`               ENUM(
+                           'open',
+                           'processing',
+                           'resolved',
+                           'closed'
+                         )            NOT NULL DEFAULT 'open'   COMMENT 'Vòng đời ticket',
+  `assigned_to`          INT UNSIGNED NULL                   COMMENT 'FK → users.id (CSKH / Kỹ thuật)',
+  `created_by`           INT UNSIGNED NOT NULL               COMMENT 'FK → users.id (người tạo)',
+  `resolved_at`          DATETIME     NULL                   COMMENT 'Thời điểm chuyển sang resolved',
+  `closed_at`            DATETIME     NULL                   COMMENT 'Thời điểm đóng ticket',
+  `last_updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Dùng để tính stale (reset khi có comment)',
+  `stale_notified`       TINYINT(1)   NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo stale 36h',
+  `resolved_remind_sent` TINYINT(1)   NOT NULL DEFAULT 0     COMMENT '1 = đã nhắc sắp tự đóng sau 24h',
+  `created_at`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_tkt_customer`     (`customer_id`),
+  KEY `idx_tkt_contract`     (`contract_id`),
+  KEY `idx_tkt_status`       (`status`),
+  KEY `idx_tkt_priority`     (`priority`),
+  KEY `idx_tkt_assigned_to`  (`assigned_to`),
+  KEY `idx_tkt_last_updated` (`last_updated_at`),
+
+  CONSTRAINT `fk_tkt_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_tkt_contract`
+    FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tkt_type`
+    FOREIGN KEY (`ticket_type_id`) REFERENCES `ticket_types` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_tkt_assigned`
+    FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_tkt_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Ticket yêu cầu hỗ trợ từ khách hàng';
+
+-- ----------------------------------------------------------------
+-- 14. ticket_comments
+--     Nội dung trao đổi trong ticket.
+--     is_internal=1 : ghi chú nội bộ (không hiển thị với KH)
+--     is_internal=0 : trao đổi với khách hàng
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ticket_comments` (
+  `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ticket_id`   INT UNSIGNED    NOT NULL           COMMENT 'FK → tickets.id',
+  `user_id`     INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (người viết)',
+  `content`     TEXT            NOT NULL           COMMENT 'Nội dung bình luận / xử lý',
+  `is_internal` TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '0=hiển thị KH | 1=nội bộ',
+  `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_tc_ticket`     (`ticket_id`),
+  KEY `idx_tc_created_at` (`created_at`),
+
+  CONSTRAINT `fk_tc_ticket`
+    FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_tc_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Nội dung trao đổi trong ticket';
+
+-- ----------------------------------------------------------------
+-- 15. ticket_attachments
+--     File đính kèm trong ticket (screenshot, log, hướng dẫn...).
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ticket_attachments` (
+  `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `ticket_id`   INT UNSIGNED    NOT NULL           COMMENT 'FK → tickets.id',
+  `uploaded_by` INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id',
+  `file_name`   VARCHAR(300)    NOT NULL           COMMENT 'Tên file gốc',
+  `file_url`    VARCHAR(1000)   NOT NULL           COMMENT 'URL lưu trữ (cloud storage)',
+  `file_size`   INT UNSIGNED    NULL               COMMENT 'Kích thước file (bytes)',
+  `mime_type`   VARCHAR(100)    NULL               COMMENT 'MIME type: image/png, application/pdf...',
+  `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_ta_ticket` (`ticket_id`),
+
+  CONSTRAINT `fk_ta_ticket`
+    FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ta_uploaded_by`
+    FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='File đính kèm trong ticket';
+
+-- ----------------------------------------------------------------
+-- 16. revenues
+--     Ghi nhận các lần thanh toán hợp đồng.
+--     Chỉ Sales (+ Admin) được tạo bản ghi.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `revenues` (
+  `id`             INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `contract_id`    INT UNSIGNED  NOT NULL               COMMENT 'FK → contracts.id',
+  `customer_id`    INT UNSIGNED  NOT NULL               COMMENT 'FK → customers.id (denorm để query nhanh)',
+  `amount`         DECIMAL(15,2) NOT NULL               COMMENT 'Số tiền thanh toán (VNĐ)',
+  `payment_date`   DATE          NOT NULL               COMMENT 'Ngày khách thanh toán thực tế',
+  `payment_method` ENUM(
+                     'bank_transfer',
+                     'cash',
+                     'online'
+                   )             NOT NULL DEFAULT 'bank_transfer' COMMENT 'Phương thức thanh toán',
+  `billing_period` VARCHAR(50)   NULL                   COMMENT 'Kỳ thanh toán: 2025 | 2025-01 | 2025-Q1',
+  `notes`          TEXT          NULL                   COMMENT 'Ghi chú thanh toán',
+  `created_by`     INT UNSIGNED  NOT NULL               COMMENT 'FK → users.id (Sales ghi nhận – bắt buộc)',
+  `created_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_rev_contract`     (`contract_id`),
+  KEY `idx_rev_customer`     (`customer_id`),
+  KEY `idx_rev_payment_date` (`payment_date`),
+  KEY `idx_rev_created_by`   (`created_by`),
+
+  CONSTRAINT `fk_rev_contract`
+    FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_rev_customer`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_rev_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Bản ghi thanh toán hợp đồng dịch vụ';
+
+-- ----------------------------------------------------------------
+-- 17. notifications
+--     Thông báo hệ thống – sinh tự động bởi cron jobs.
+--     ref_type + ref_id : liên kết đến contract hoặc ticket.
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`        INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (người nhận)',
+  `type`           VARCHAR(100)    NOT NULL           COMMENT 'Loại thông báo: contract_warn_30|ticket_stale|...',
+  `title`          VARCHAR(300)    NOT NULL           COMMENT 'Tiêu đề thông báo',
+  `message`        TEXT            NOT NULL           COMMENT 'Nội dung chi tiết',
+  `ref_type`       VARCHAR(50)     NULL               COMMENT 'Đối tượng liên quan: contract | ticket',
+  `ref_id`         INT UNSIGNED    NULL               COMMENT 'ID của đối tượng liên quan',
+  `is_read`        TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '0=chưa đọc | 1=đã đọc',
+  `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`),
+  KEY `idx_notif_user_id`    (`user_id`),
+  KEY `idx_notif_is_read`    (`is_read`),
+  KEY `idx_notif_type`       (`type`),
+  KEY `idx_notif_created_at` (`created_at`),
+
+  CONSTRAINT `fk_notif_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Thông báo hệ thống (in-app )';
+
+-- ================================================================
+SET FOREIGN_KEY_CHECKS = 1;
+-- ================================================================
+-- END OF SCHEMA
+-- ================================================================
+

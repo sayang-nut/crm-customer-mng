@@ -2,14 +2,7 @@
 
 /**
  * @file     backend/src/modules/customers/customers.service.js
- * @location backend/src/modules/customers/customers.service.js
- * ─────────────────────────────────────────────────────────────────
- * @requires ../../config/database          → sequelize
- * @requires ../../config/logger            → winston logger
- * @requires ../../middleware/error.middleware → AppError
- * @requires ../../config/constants         → ROLES, CUSTOMER_STATUS
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ – LAYER: SERVICE (Business Logic)
+
  *
  * Quản lý khách hàng doanh nghiệp + contacts:
  *   listCustomers    – Danh sách, filter, phân trang (Sales chỉ thấy KH của mình)
@@ -23,7 +16,6 @@
  *   deleteContact    – Xóa đầu mối
  *   listIndustries   – Danh sách ngành nghề (dùng cho dropdown)
  *   listSalesUsers   – Danh sách Sales để assign (Admin/Manager)
- * ─────────────────────────────────────────────────────────────────
  */
 
 const sequelize    = require('@config/database');
@@ -58,9 +50,7 @@ const _getById = async (id) => {
   return { ...customer, contacts };
 };
 
-// ─────────────────────────────────────────────────────────────────
 // listCustomers
-// ─────────────────────────────────────────────────────────────────
 const listCustomers = async (user, {
   page = 1, limit = 20,
   status, industryId, assignedTo, source, search,
@@ -131,9 +121,7 @@ const getCustomerById = async (id, user) => {
   return customer;
 };
 
-// ─────────────────────────────────────────────────────────────────
 // createCustomer
-// ─────────────────────────────────────────────────────────────────
 const createCustomer = async (data, userId) => {
   const { companyName, taxCode, address, industryId, website, source, assignedTo, notes } = data;
 
@@ -171,11 +159,11 @@ const createCustomer = async (data, userId) => {
     `INSERT INTO customer_status_history
        (customer_id, from_status, to_status, reason, changed_by)
      VALUES (?, NULL, 'lead', 'Tạo khách hàng mới', ?)`,
-    { replacements: [result.insertId, userId] }
+    { replacements: [result, userId] }
   );
 
-  logger.info(`[CUSTOMERS] Created customer id=${result.insertId} by user=${userId}`);
-  return _getById(result.insertId);
+  logger.info(`[CUSTOMERS] Created customer id=${result} by user=${userId}`);
+  return _getById(result);
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -292,7 +280,7 @@ const addContact = async (customerId, { fullName, phone, email, notes, isPrimary
 
   const [[contact]] = await sequelize.query(
     `SELECT * FROM contacts WHERE id = ? LIMIT 1`,
-    { replacements: [result.insertId] }
+    { replacements: [result] }
   );
   return contact;
 };

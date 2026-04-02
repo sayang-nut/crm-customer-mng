@@ -14,7 +14,7 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
-import Modal from '../../components/common/Modal';
+import ConfirmDeleteModal from '../../components/common/ConfirmDeleteModal';
 
 const CustomerDetailPage = () => {
   const { id } = useParams();
@@ -418,35 +418,15 @@ const CustomerDetailPage = () => {
         </div>
       </div>
 
-      {/* Delete Modal - đã white từ common/Modal */}
-      <Modal
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        itemName={currentCustomer.company_name}
         title="Xác nhận xóa khách hàng"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-              Hủy
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              Xóa khách hàng
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-gray-800 text-lg">
-            Bạn có chắc chắn muốn xóa khách hàng{' '}
-            <span className="font-black text-dark-900">{currentCustomer.company_name}</span>?
-          </p>
-          <div className="p-5 bg-red-50 border border-red-200 rounded-xl">
-            <p className="text-sm text-red-800 font-semibold">
-              ⚠️ <strong>Cảnh báo:</strong> Hành động này sẽ xóa vĩnh viễn tất cả dữ liệu liên quan 
-              (hợp đồng, tickets) và không thể hoàn tác.
-            </p>
-          </div>
-        </div>
-      </Modal>
+        warningMessage="Hành động này sẽ xóa vĩnh viễn tất cả dữ liệu liên quan (hợp đồng, tickets) và không thể hoàn tác."
+      />
     </div>
   );
 };

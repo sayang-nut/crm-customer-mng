@@ -34,7 +34,7 @@ import Table from '../../components/common/Table';
 import Pagination from '../../components/common/Pagination';
 import Loading from '../../components/common/Loading';
 import EmptyState from '../../components/common/EmptyState';
-import Modal from '../../components/common/Modal';
+import ConfirmDeleteModal from '../../components/common/ConfirmDeleteModal';
 
 const CustomersPage = () => {
   const navigate = useNavigate();
@@ -122,7 +122,6 @@ const CustomersPage = () => {
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          {/* ✅ WHITE AVATAR - NO GRADIENT */}
           <div className="w-12 h-12 bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
             <Building2 className="w-6 h-6 text-gray-500" />
           </div>
@@ -277,10 +276,7 @@ const CustomersPage = () => {
               >
                 Bộ lọc
               </Button>
-              <Button type="button" variant="outline" icon={Download} className="!rounded-none h-12 px-6">
-                Xuất Excel
-              </Button>
-            </div>
+                         </div>
           </form>
         </div>
 
@@ -354,7 +350,6 @@ const CustomersPage = () => {
           <EmptyState
             icon={Building2}
             title="Chưa có khách hàng"
-            description="Bắt đầu bằng cách thêm khách hàng đầu tiên của bạn vào hệ thống quản lý."
             action
             actionLabel="Thêm khách hàng"
             onAction={() => navigate('/customers/new')}
@@ -383,31 +378,14 @@ const CustomersPage = () => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        title={<span className="text-xl font-black text-red-600">Xác nhận xóa</span>}
-        footer={
-          <div className="flex gap-3 justify-end w-full">
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="!rounded-none px-6">
-              Hủy
-            </Button>
-            <Button variant="danger" onClick={handleConfirmDelete} className="!rounded-none px-6 font-bold">
-              Xóa vĩnh viễn
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-gray-800 text-lg">
-            Bạn có chắc chắn muốn xóa khách hàng: <br />
-            <span className="font-black text-dark-900 text-xl">{customerToDelete?.company_name}</span>?
-          </p>
-          <div className="p-4 bg-red-50 border border-red-100 text-red-700 text-sm italic">
-            * Cảnh báo: Hành động này sẽ xóa toàn bộ dữ liệu liên quan và không thể khôi phục lại.
-          </div>
-        </div>
-      </Modal>
+        onConfirm={handleConfirmDelete}
+        itemName={customerToDelete?.company_name}
+        title="Xác nhận xóa khách hàng"
+        warningMessage="Hành động này sẽ xóa toàn bộ dữ liệu liên quan và không thể khôi phục lại."
+      />
     </div>
   );
 };

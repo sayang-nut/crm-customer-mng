@@ -52,7 +52,7 @@ const createIndustry = async (name) => {
     `INSERT INTO industries (name) VALUES (?)`,
     { replacements: [name.trim()] }
   );
-  return { id: result.insertId, name: name.trim() };
+  return { id: result, name: name.trim() };
 };
 
 const updateIndustry = async (id, name) => {
@@ -130,8 +130,8 @@ const createGroup = async ({ name, description }) => {
     `INSERT INTO solution_groups (name, description) VALUES (?, ?)`,
     { replacements: [name.trim(), description || null] }
   );
-  info(`[SOLUTIONS] Created group id=${result.insertId}`);
-  return getGroupById(result.insertId);
+  info(`[SOLUTIONS] Created group id=${result}`);
+  return getGroupById(result);
 };
 
 const updateGroup = async (id, { name, description }) => {
@@ -216,8 +216,8 @@ const createSolution = async ({ solutionGroupId, name, description }) => {
     `INSERT INTO solutions (solution_group_id, name, description) VALUES (?, ?, ?)`,
     { replacements: [Number(solutionGroupId), name.trim(), description || null] }
   );
-  info(`[SOLUTIONS] Created solution id=${result.insertId}`);
-  return getSolutionById(result.insertId);
+  info(`[SOLUTIONS] Created solution id=${result}`);
+  return getSolutionById(result);
 };
 
 const updateSolution = async (id, { solutionGroupId, name, description }) => {
@@ -316,8 +316,8 @@ const createPackage = async ({ solutionId, name, level, priceMonthly, priceYearl
       ],
     }
   );
-  info(`[SOLUTIONS] Created package id=${result.insertId}`);
-  return _getPackageById(result.insertId);
+  info(`[SOLUTIONS] Created package id=${result}`);
+  return _getPackageById(result);
 };
 
 const updatePackage = async (id, data) => {

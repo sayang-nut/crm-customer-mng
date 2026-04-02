@@ -38,7 +38,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-const svc = require('./service').default;
+const svc = require('./service');
 
 // ── Industries ────────────────────────────────────────────────────
 const listIndustries     = async (req, res, next) => { try { res.json({ success: true, data: await svc.listIndustries() }); } catch (e) { next(e); } };

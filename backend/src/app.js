@@ -112,7 +112,7 @@ const PORT = parseInt(process.env.PORT, 10) || 3000;
 const start = async () => {
   try {
     await sequelize.authenticate();
-    logger.info('✅ Database connected successfully.');
+    logger.info('Database connected successfully.');
 
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Bado CRM API running on port ${PORT}`);
