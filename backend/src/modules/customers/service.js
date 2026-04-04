@@ -28,7 +28,7 @@ const _getById = async (id) => {
   const [[customer]] = await sequelize.query(
     `SELECT c.id, c.company_name, c.tax_code, c.address, c.website,
             c.source, c.status, c.notes,
-            c.industry_id, i.name AS industry_name,
+            c.industry_id, i.name AS industry,
             c.assigned_to, u.full_name AS assigned_to_name,
             c.created_by, cb.full_name AS created_by_name,
             c.created_at, c.updated_at
@@ -47,7 +47,17 @@ const _getById = async (id) => {
     { replacements: [Number(id)] }
   );
 
-  return { ...customer, contacts };
+  const primaryContact = contacts.find((ct) => ct.is_primary === 1) || contacts[0] || {};
+
+  return {
+    ...customer,
+    industry: customer.industry || null,
+    representative_name: primaryContact.full_name || null,
+    representative_position: primaryContact.notes || null,
+    email: primaryContact.email || null,
+    phone: primaryContact.phone || null,
+    contacts,
+  };
 };
 
 // listCustomers
@@ -86,8 +96,12 @@ const listCustomers = async (user, {
 
   const [customers] = await sequelize.query(
     `SELECT c.id, c.company_name, c.tax_code, c.source, c.status,
-            c.industry_id, i.name AS industry_name,
+            c.industry_id, i.name AS industry,
             c.assigned_to, u.full_name AS assigned_to_name,
+            (SELECT ct.full_name FROM contacts ct WHERE ct.customer_id = c.id ORDER BY ct.is_primary DESC, ct.id ASC LIMIT 1) AS representative_name,
+            (SELECT ct.email FROM contacts ct WHERE ct.customer_id = c.id ORDER BY ct.is_primary DESC, ct.id ASC LIMIT 1) AS email,
+            (SELECT ct.phone FROM contacts ct WHERE ct.customer_id = c.id ORDER BY ct.is_primary DESC, ct.id ASC LIMIT 1) AS phone,
+            (SELECT ct.notes FROM contacts ct WHERE ct.customer_id = c.id ORDER BY ct.is_primary DESC, ct.id ASC LIMIT 1) AS representative_position,
             c.created_at, c.updated_at
      FROM customers c
      LEFT JOIN industries i ON i.id = c.industry_id
@@ -154,16 +168,37 @@ const createCustomer = async (data, userId) => {
     }
   );
 
+  const customerId = result.insertId;
+
   // Ghi status history: tạo mới → lead
   await sequelize.query(
     `INSERT INTO customer_status_history
        (customer_id, from_status, to_status, reason, changed_by)
      VALUES (?, NULL, 'lead', 'Tạo khách hàng mới', ?)`,
-    { replacements: [result, userId] }
+    { replacements: [customerId, userId] }
   );
 
-  logger.info(`[CUSTOMERS] Created customer id=${result} by user=${userId}`);
-  return _getById(result);
+  // Tạo đại diện liên hệ nếu có dữ liệu
+  const representativeName = data.representativeName || data.representative_name;
+  const representativePosition = data.representativePosition || data.representative_position;
+  if (representativeName) {
+    await sequelize.query(
+      `INSERT INTO contacts (customer_id, full_name, phone, email, notes, is_primary)
+       VALUES (?, ?, ?, ?, ?, 1)`,
+      {
+        replacements: [
+          customerId,
+          representativeName.trim(),
+          data.phone || null,
+          data.email || null,
+          representativePosition || null,
+        ],
+      }
+    );
+  }
+
+  logger.info(`[CUSTOMERS] Created customer id=${customerId} by user=${userId}`);
+  return _getById(customerId);
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -206,6 +241,62 @@ const updateCustomer = async (id, data, user) => {
     { replacements: [...values, Number(id)] }
   );
 
+  // Cập nhật đại diện liên hệ nếu có dữ liệu
+  const representativeName = data.representativeName || data.representative_name;
+  const representativePosition = data.representativePosition || data.representative_position;
+  const representativeEmail = data.email;
+  const representativePhone = data.phone;
+
+  if (representativeName || representativeEmail || representativePhone || representativePosition) {
+    const [[primaryContact]] = await sequelize.query(
+      `SELECT id FROM contacts WHERE customer_id = ? ORDER BY is_primary DESC, id ASC LIMIT 1`,
+      { replacements: [Number(id)] }
+    );
+
+    if (primaryContact) {
+      const updateFields = [];
+      const updateValues = [];
+
+      if (representativeName) {
+        updateFields.push('full_name = ?');
+        updateValues.push(representativeName.trim());
+      }
+      if (representativeEmail !== undefined) {
+        updateFields.push('email = ?');
+        updateValues.push(representativeEmail || null);
+      }
+      if (representativePhone !== undefined) {
+        updateFields.push('phone = ?');
+        updateValues.push(representativePhone || null);
+      }
+      if (representativePosition !== undefined) {
+        updateFields.push('notes = ?');
+        updateValues.push(representativePosition || null);
+      }
+
+      if (updateFields.length > 0) {
+        await sequelize.query(
+          `UPDATE contacts SET ${updateFields.join(', ')} WHERE id = ?`,
+          { replacements: [...updateValues, Number(primaryContact.id)] }
+        );
+      }
+    } else if (representativeName) {
+      await sequelize.query(
+        `INSERT INTO contacts (customer_id, full_name, phone, email, notes, is_primary)
+         VALUES (?, ?, ?, ?, ?, 1)`,
+        {
+          replacements: [
+            Number(id),
+            representativeName.trim(),
+            representativePhone || null,
+            representativeEmail || null,
+            representativePosition || null,
+          ],
+        }
+      );
+    }
+  }
+
   return _getById(id);
 };
 
@@ -235,6 +326,27 @@ const changeStatus = async (id, newStatus, reason, userId) => {
 
   logger.info(`[CUSTOMERS] Status changed id=${id}: ${customer.status} → ${newStatus}`);
   return _getById(id);
+};
+
+// ─────────────────────────────────────────────────────────────────
+// deleteCustomer
+const deleteCustomer = async (id, user) => {
+  const [[customer]] = await sequelize.query(
+    `SELECT id, assigned_to FROM customers WHERE id = ? LIMIT 1`,
+    { replacements: [Number(id)] }
+  );
+  if (!customer) throw new AppError('Khách hàng không tồn tại.', 404);
+
+  if (user.role === ROLES.SALES && customer.assigned_to !== user.id) {
+    throw new AppError('Bạn không có quyền xóa khách hàng này.', 403);
+  }
+
+  await sequelize.query(
+    `DELETE FROM customers WHERE id = ?`,
+    { replacements: [Number(id)] }
+  );
+
+  logger.info(`[CUSTOMERS] Deleted customer id=${id} by user=${user.id}`);
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -348,6 +460,7 @@ module.exports = {
   getCustomerById,
   createCustomer,
   updateCustomer,
+  deleteCustomer,
   changeStatus,
   getStatusHistory,
   addContact,

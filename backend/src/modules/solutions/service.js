@@ -27,13 +27,13 @@ require('module-alias/register');
  * ─────────────────────────────────────────────────────────────────
  */
  
-const { query } = require('@config/database');
+const sequelize = require('@config/database');
 const { AppError } = require('@middleware/error');  
 const { info } = require('@config/logger');
 // INDUSTRIES
 
 const listIndustries = async () => {
-  const [rows] = await query(
+  const [rows] = await sequelize.query(
     `SELECT id, name, created_at FROM industries ORDER BY name ASC`
   );
   return rows;
@@ -42,13 +42,13 @@ const listIndustries = async () => {
 const createIndustry = async (name) => {
   if (!name || !name.trim()) throw new AppError('Tên ngành nghề không được để trống.', 400);
 
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM industries WHERE name = ? LIMIT 1`,
     { replacements: [name.trim()] }
   );
   if (existing) throw new AppError('Ngành nghề này đã tồn tại.', 409);
 
-  const [result] = await query(
+  const [result] = await sequelize.query(
     `INSERT INTO industries (name) VALUES (?)`,
     { replacements: [name.trim()] }
   );
@@ -58,13 +58,13 @@ const createIndustry = async (name) => {
 const updateIndustry = async (id, name) => {
   if (!name || !name.trim()) throw new AppError('Tên ngành nghề không được để trống.', 400);
 
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM industries WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!existing) throw new AppError('Ngành nghề không tồn tại.', 404);
 
-  await query(
+  await sequelize.query(
     `UPDATE industries SET name = ?, updated_at = NOW() WHERE id = ?`,
     { replacements: [name.trim(), Number(id)] }
   );
@@ -72,20 +72,20 @@ const updateIndustry = async (id, name) => {
 };
 
 const deleteIndustry = async (id) => {
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM industries WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!existing) throw new AppError('Ngành nghề không tồn tại.', 404);
 
   // Kiểm tra có KH nào đang dùng không
-  const [[inUse]] = await query(
+  const [[inUse]] = await sequelize.query(
     `SELECT id FROM customers WHERE industry_id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (inUse) throw new AppError('Ngành nghề đang được sử dụng bởi khách hàng, không thể xóa.', 400);
 
-  await query(`DELETE FROM industries WHERE id = ?`, { replacements: [Number(id)] });
+  await sequelize.query(`DELETE FROM industries WHERE id = ?`, { replacements: [Number(id)] });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -93,7 +93,7 @@ const deleteIndustry = async (id) => {
 // ═══════════════════════════════════════════════════════════════════
 
 const listGroups = async () => {
-  const [groups] = await query(
+  const [groups] = await sequelize.query(
     `SELECT sg.id, sg.name, sg.description, sg.created_at,
             COUNT(s.id) AS solution_count
      FROM solution_groups sg
@@ -105,7 +105,7 @@ const listGroups = async () => {
 };
 
 const getGroupById = async (id) => {
-  const [[group]] = await query(
+  const [[group]] = await sequelize.query(
     `SELECT sg.id, sg.name, sg.description, sg.created_at,
             COUNT(s.id) AS solution_count
      FROM solution_groups sg
@@ -120,13 +120,13 @@ const getGroupById = async (id) => {
 const createGroup = async ({ name, description }) => {
   if (!name || !name.trim()) throw new AppError('Tên nhóm không được để trống.', 400);
 
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM solution_groups WHERE name = ? LIMIT 1`,
     { replacements: [name.trim()] }
   );
   if (existing) throw new AppError('Tên nhóm giải pháp đã tồn tại.', 409);
 
-  const [result] = await query(
+  const [result] = await sequelize.query(
     `INSERT INTO solution_groups (name, description) VALUES (?, ?)`,
     { replacements: [name.trim(), description || null] }
   );
@@ -141,7 +141,7 @@ const updateGroup = async (id, { name, description }) => {
   if (description !== undefined) { fields.push('description = ?'); values.push(description || null); }
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
 
-  await query(
+  await sequelize.query(
     `UPDATE solution_groups SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
     { replacements: [...values, Number(id)] }
   );
@@ -150,12 +150,12 @@ const updateGroup = async (id, { name, description }) => {
 
 const deleteGroup = async (id) => {
   await getGroupById(id);
-  const [[inUse]] = await query(
+  const [[inUse]] = await sequelize.query(
     `SELECT id FROM solutions WHERE solution_group_id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (inUse) throw new AppError('Nhóm đang có giải pháp con, không thể xóa.', 400);
-  await query(`DELETE FROM solution_groups WHERE id = ?`, { replacements: [Number(id)] });
+  await sequelize.query(`DELETE FROM solution_groups WHERE id = ?`, { replacements: [Number(id)] });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -166,7 +166,7 @@ const listSolutions = async ({ groupId } = {}) => {
   const conds = ['1=1'], replacements = [];
   if (groupId) { conds.push('s.solution_group_id = ?'); replacements.push(Number(groupId)); }
 
-  const [rows] = await query(
+  const [rows] = await sequelize.query(
     `SELECT s.id, s.name, s.description, s.solution_group_id,
             s.created_at, sg.name AS group_name,
             COUNT(sp.id) AS package_count
@@ -182,7 +182,7 @@ const listSolutions = async ({ groupId } = {}) => {
 };
 
 const getSolutionById = async (id) => {
-  const [[solution]] = await query(
+  const [[solution]] = await sequelize.query(
     `SELECT s.id, s.name, s.description, s.solution_group_id,
             s.created_at, sg.name AS group_name
      FROM solutions s
@@ -192,7 +192,7 @@ const getSolutionById = async (id) => {
   );
   if (!solution) throw new AppError('Giải pháp không tồn tại.', 404);
 
-  const [packages] = await query(
+  const [packages] = await sequelize.query(
     `SELECT id, name, level, price_monthly, price_yearly, description, status
      FROM service_packages WHERE solution_id = ? ORDER BY price_monthly ASC`,
     { replacements: [Number(id)] }
@@ -206,13 +206,13 @@ const createSolution = async ({ solutionGroupId, name, description }) => {
 
   await getGroupById(solutionGroupId); // validate group exists
 
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM solutions WHERE name = ? AND solution_group_id = ? LIMIT 1`,
     { replacements: [name.trim(), Number(solutionGroupId)] }
   );
   if (existing) throw new AppError('Giải pháp này đã tồn tại trong nhóm.', 409);
 
-  const [result] = await query(
+  const [result] = await sequelize.query(
     `INSERT INTO solutions (solution_group_id, name, description) VALUES (?, ?, ?)`,
     { replacements: [Number(solutionGroupId), name.trim(), description || null] }
   );
@@ -228,7 +228,7 @@ const updateSolution = async (id, { solutionGroupId, name, description }) => {
   if (solutionGroupId !== undefined) { fields.push('solution_group_id = ?'); values.push(Number(solutionGroupId)); }
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
 
-  await query(
+  await sequelize.query(
     `UPDATE solutions SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
     { replacements: [...values, Number(id)] }
   );
@@ -237,12 +237,12 @@ const updateSolution = async (id, { solutionGroupId, name, description }) => {
 
 const deleteSolution = async (id) => {
   await getSolutionById(id);
-  const [[inUse]] = await query(
+  const [[inUse]] = await sequelize.query(
     `SELECT id FROM service_packages WHERE solution_id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (inUse) throw new AppError('Giải pháp đang có gói dịch vụ, không thể xóa.', 400);
-  await query(`DELETE FROM solutions WHERE id = ?`, { replacements: [Number(id)] });
+  await sequelize.query(`DELETE FROM solutions WHERE id = ?`, { replacements: [Number(id)] });
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -252,7 +252,7 @@ const deleteSolution = async (id) => {
 const LEVELS = ['support', 'basic', 'professional', 'multichannel', 'enterprise'];
 
 const _getPackageById = async (id) => {
-  const [[pkg]] = await query(
+  const [[pkg]] = await sequelize.query(
     `SELECT sp.id, sp.solution_id, sp.name, sp.level,
             sp.price_monthly, sp.price_yearly, sp.description, sp.status,
             sp.created_at, sp.updated_at,
@@ -272,7 +272,7 @@ const listPackages = async ({ solutionId, status } = {}) => {
   if (solutionId) { conds.push('sp.solution_id = ?'); replacements.push(Number(solutionId)); }
   if (status)     { conds.push('sp.status = ?');      replacements.push(status); }
 
-  const [rows] = await query(
+  const [rows] = await sequelize.query(
     `SELECT sp.id, sp.solution_id, sp.name, sp.level,
             sp.price_monthly, sp.price_yearly, sp.description, sp.status,
             sp.created_at, s.name AS solution_name, sg.name AS group_name
@@ -297,13 +297,13 @@ const createPackage = async ({ solutionId, name, level, priceMonthly, priceYearl
 
   await getSolutionById(solutionId); // validate solution exists
 
-  const [[existing]] = await query(
+  const [[existing]] = await sequelize.query(
     `SELECT id FROM service_packages WHERE solution_id = ? AND level = ? LIMIT 1`,
     { replacements: [Number(solutionId), level] }
   );
   if (existing) throw new AppError(`Gói cấp "${level}" đã tồn tại trong giải pháp này.`, 409);
 
-  const [result] = await query(
+  const [result] = await sequelize.query(
     `INSERT INTO service_packages
        (solution_id, name, level, price_monthly, price_yearly, description, status)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -337,7 +337,7 @@ const updatePackage = async (id, data) => {
 
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
 
-  await query(
+  await sequelize.query(
     `UPDATE service_packages SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
     { replacements: [...values, Number(id)] }
   );
@@ -346,7 +346,7 @@ const updatePackage = async (id, data) => {
 
 const togglePackageStatus = async (id, status) => {
   await _getPackageById(id);
-  await query(
+  await sequelize.query(
     `UPDATE service_packages SET status = ?, updated_at = NOW() WHERE id = ?`,
     { replacements: [status, Number(id)] }
   );
@@ -356,12 +356,12 @@ const togglePackageStatus = async (id, status) => {
 const deletePackage = async (id) => {
   await _getPackageById(id);
   // Kiểm tra gói đang được dùng trong hợp đồng
-  const [[inUse]] = await query(
+  const [[inUse]] = await sequelize.query(
     `SELECT id FROM contracts WHERE package_id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (inUse) throw new AppError('Gói dịch vụ đang được sử dụng trong hợp đồng, không thể xóa.', 400);
-  await query(`DELETE FROM service_packages WHERE id = ?`, { replacements: [Number(id)] });
+  await sequelize.query(`DELETE FROM service_packages WHERE id = ?`, { replacements: [Number(id)] });
 };
 
 module.exports = {

@@ -76,6 +76,10 @@ router.post('/',
     body('assignedTo').optional({ checkFalsy: true }).isInt({ min: 1 }),
     body('website').optional({ checkFalsy: true }).isURL().withMessage('Website URL không hợp lệ.'),
     body('source').optional({ checkFalsy: true }).isString().trim(),
+    body('representativeName').optional({ checkFalsy: true }).isString().trim(),
+    body('representativePosition').optional({ checkFalsy: true }).isString().trim(),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email không hợp lệ.'),
+    body('phone').optional({ checkFalsy: true }).isString().trim(),
   ],
   validate,
   ctrl.create
@@ -100,9 +104,23 @@ router.put('/:id',
     body('industryId').optional({ checkFalsy: true }).isInt({ min: 1 }),
     body('assignedTo').optional({ checkFalsy: true }).isInt({ min: 1 }),
     body('website').optional({ checkFalsy: true }).isURL().withMessage('Website URL không hợp lệ.'),
+    body('representativeName').optional({ checkFalsy: true }).isString().trim(),
+    body('representativePosition').optional({ checkFalsy: true }).isString().trim(),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email không hợp lệ.'),
+    body('phone').optional({ checkFalsy: true }).isString().trim(),
   ],
   validate,
   ctrl.update
+);
+
+/** DELETE /api/customers/:id */
+router.delete('/:id',
+  authorize(...CAN_WRITE),
+  [
+    param('id').isInt({ min: 1 }),
+  ],
+  validate,
+  ctrl.removeCustomer
 );
 
 /** PUT /api/customers/:id/status */

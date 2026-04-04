@@ -89,6 +89,13 @@ const deleteContact = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const removeCustomer = async (req, res, next) => {
+  try {
+    await svc.deleteCustomer(req.params.id, req.user);
+    res.json({ success: true, message: 'Đã xóa khách hàng.' });
+  } catch (err) { next(err); }
+};
+
 // Lookups
 const industries = async (req, res, next) => {
   try {
@@ -108,5 +115,6 @@ module.exports = {
   list, getOne, create, update,
   changeStatus, statusHistory,
   addContact, updateContact, deleteContact,
+  removeCustomer,
   industries, salesUsers,
 };
