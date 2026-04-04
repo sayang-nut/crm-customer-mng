@@ -1,6 +1,5 @@
 /**
  * @file     frontend/src/pages/solutions/SolutionsTab.jsx
- * @theme    WHITE PLAIN - Tailwind + Common Components
  */
 
 import React, { useState, useEffect, useCallback } from 'react';

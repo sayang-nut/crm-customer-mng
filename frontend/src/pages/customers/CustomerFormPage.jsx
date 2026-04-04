@@ -16,6 +16,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
+import solutionsService from '../../services/solutionsService';
 
 const CustomerFormPage = () => {
   const { id } = useParams();
@@ -28,7 +29,7 @@ const CustomerFormPage = () => {
   const [formData, setFormData] = useState({
     company_name: '',
     tax_code: '',
-    industry: '',
+    industry_id: '',
     representative_name: '',
     representative_position: '',
     email: '',
@@ -41,6 +42,7 @@ const CustomerFormPage = () => {
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [industries, setIndustries] = useState([]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -53,11 +55,23 @@ const CustomerFormPage = () => {
   }, [dispatch, id, isEditMode]);
 
   useEffect(() => {
+    const fetchIndustries = async () => {
+      try {
+        const data = await solutionsService.getIndustries();
+        setIndustries(data || []);
+      } catch (error) {
+        console.error('Lỗi khi tải danh sách ngành nghề:', error);
+      }
+    };
+    fetchIndustries();
+  }, []);
+
+  useEffect(() => {
     if (isEditMode && currentCustomer) {
       setFormData({
         company_name: currentCustomer.company_name || '',
         tax_code: currentCustomer.tax_code || '',
-        industry: currentCustomer.industry || '',
+        industry_id: currentCustomer.industry_id || currentCustomer.industry || '',
         representative_name: currentCustomer.representative_name || '',
         representative_position: currentCustomer.representative_position || '',
         email: currentCustomer.email || '',
@@ -94,8 +108,8 @@ const CustomerFormPage = () => {
     } else if (!/^\d{10}(-\d{3})?$/.test(formData.tax_code)) {
       newErrors.tax_code = 'Mã số thuế không hợp lệ (10-13 số)';
     }
-    if (!formData.industry) {
-      newErrors.industry = 'Vui lòng chọn ngành nghề';
+    if (!formData.industry_id) {
+      newErrors.industry_id = 'Vui lòng chọn ngành nghề';
     }
     if (!formData.representative_name.trim()) {
       newErrors.representative_name = 'Vui lòng nhập tên người đại diện';
@@ -210,40 +224,22 @@ const CustomerFormPage = () => {
                     Ngành nghề <span className="text-red-500">*</span>
                   </label>
                   <select
-                    name="industry"
-                    value={formData.industry}
+                  name="industry_id"
+                  value={formData.industry_id}
                     onChange={handleChange}
                     className={`h-[42px] px-3 border border-gray-300 text-dark-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all ${
-                      errors.industry ? 'border-red-500 bg-red-50' : 'bg-white'
+                    errors.industry_id ? 'border-red-500 bg-red-50' : 'bg-white'
                     }`}
                   >
                     <option value="">Chọn ngành nghề</option>
-                    <optgroup label="Bán lẻ">
-                      <option value="Thời trang">Thời trang</option>
-                      <option value="Điện thoại & Điện máy">Điện thoại & Điện máy</option>
-                      <option value="Vật liệu xây dựng">Vật liệu xây dựng</option>
-                      <option value="Nhà thuốc">Nhà thuốc</option>
-                      <option value="Mẹ và bé">Mẹ và bé</option>
-                      <option value="Sách & Văn phòng phẩm">Sách & Văn phòng phẩm</option>
-                    </optgroup>
-                    <optgroup label="Lưu trú & Làm đẹp">
-                      <option value="Spa & Massage">Spa & Massage</option>
-                      <option value="Hair Salon & Nails">Hair Salon & Nails</option>
-                      <option value="Khách sạn & Nhà nghỉ">Khách sạn & Nhà nghỉ</option>
-                      <option value="Homestay & Villa">Homestay & Villa</option>
-                      <option value="Resort">Resort</option>
-                      <option value="Fitness & Yoga">Fitness & Yoga</option>
-                    </optgroup>
-                    <optgroup label="Ăn uống & Giải trí">
-                      <option value="Nhà hàng">Nhà hàng</option>
-                      <option value="Cà phê & Trà sữa">Cà phê & Trà sữa</option>
-                      <option value="Karaoke & Bida">Karaoke & Bida</option>
-                      <option value="Bar & Pub">Bar & Pub</option>
-                      <option value="Căn tin & Trạm nghỉ">Căn tin & Trạm nghỉ</option>
-                    </optgroup>
+                    {industries.map((ind) => (
+                      <option key={ind.id} value={ind.id}>
+                        {ind.name}
+                      </option>
+                    ))}
                   </select>
-                  {errors.industry && (
-                    <p className="text-xs text-red-500 mt-1">{errors.industry}</p>
+                {errors.industry_id && (
+                  <p className="text-xs text-red-500 mt-1">{errors.industry_id}</p>
                   )}
                 </div>
 

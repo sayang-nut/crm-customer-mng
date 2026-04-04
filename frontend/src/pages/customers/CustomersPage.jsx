@@ -364,8 +364,6 @@ const CustomersPage = () => {
           </>
         )}
       </div>
-
-      {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
