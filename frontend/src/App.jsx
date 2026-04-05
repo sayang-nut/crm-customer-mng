@@ -86,6 +86,7 @@ const AppRoutes = () => (
 
     <Route path="/change-password" element={<WithLayout><ChangePasswordPage /></WithLayout>} />
 
+
     {/* Users */}
     <Route path="/users"            element={<WithLayout allowedRoles={['admin','manager']}><UsersPage /></WithLayout>} />
     <Route path="/users/login-logs" element={<WithLayout allowedRoles={['admin']}><LoginLogsPage /></WithLayout>} />

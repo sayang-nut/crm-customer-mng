@@ -6,201 +6,273 @@
  * @requires ../../store/authContext     → useAuth
  * ─────────────────────────────────────────────────────────────────
  * VAI TRÒ: Trang xem lịch sử đăng nhập hệ thống (Admin only).
- *   - Bảng log toàn bộ hệ thống: user, email, role, status, IP, thời gian
- *   - Filter: success/failed, search theo email
- *   - Phân trang
- *   - Nếu truyền prop userId → chỉ hiện log của user đó
+ *  - Bảng log toàn bộ hệ thống: user, email, role, status, IP, thời gian
+ *  - Filter: success/failed, search theo email
+ *  - Phân trang
+ *  - Nếu truyền prop userId → chỉ hiện log của user đó
  * ─────────────────────────────────────────────────────────────────
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { Search, ArrowLeft, ShieldCheck, ShieldAlert, UserRound } from 'lucide-react';
+import { useAuth } from '../../store/authContext';
 import usersService from '../../services/usersService';
+
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import Card from '../../components/common/Card';
+import Badge from '../../components/common/Badge';
+import Loading from '../../components/common/Loading';
+import EmptyState from '../../components/common/EmptyState';
+import Pagination from '../../components/common/Pagination';
 
 const LIMIT = 30;
 
-// ── Status badge ──────────────────────────────────────────────────
-const LogBadge = ({ status }) => {
-  const ok = status === 'success';
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-      background: ok ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
-      color:      ok ? '#6EE7B7'               : '#FCA5A5',
-      border:     `1px solid ${ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />
-      {ok ? 'Thành công' : 'Thất bại'}
-    </span>
-  );
+const ROLE_LABELS = {
+  admin: 'Admin',
+  manager: 'Manager',
+  sales: 'Sales',
+  cskh: 'CSKH',
+  technical: 'Kỹ thuật',
 };
 
-const ROLE_LABELS = { admin:'Admin', manager:'Manager', sales:'Sales', cskh:'CSKH', technical:'Kỹ thuật' };
-const ROLE_COLORS = {
-  admin:'#FCA5A5', manager:'#D8B4FE', sales:'#93C5FD', cskh:'#6EE7B7', technical:'#FCD34D',
+const ROLE_VARIANTS = {
+  admin: 'danger',
+  manager: 'purple',
+  sales: 'info',
+  cskh: 'success',
+  technical: 'warning',
 };
 
-// ── Main ──────────────────────────────────────────────────────────
 const LoginLogsPage = ({ userId = null }) => {
+  const { user: me } = useAuth();
   const [searchParams] = useSearchParams();
-  const targetUserId   = userId || searchParams.get('userId') || null;
+  const targetUserId = userId || searchParams.get('userId') || null;
 
-  const [logs,    setLogs]    = useState([]);
-  const [total,   setTotal]   = useState(0);
-  const [page,    setPage]    = useState(1);
+  const [logs, setLogs] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
-  const [filter,  setFilter]  = useState('');  // '' | 'success' | 'failed'
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState(''); // '' | 'success' | 'failed'
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetch = useCallback(async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const params = { page, limit: LIMIT };
+      const params = {
+        page,
+        limit: LIMIT,
+        ...(targetUserId ? { userId: targetUserId } : {}),
+        ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+        ...(filter ? { status: filter } : {}),
+      };
+
       const res = targetUserId
         ? await usersService.getUserLoginLogs(targetUserId, params)
         : await usersService.getLoginLogs(params);
-      setLogs(res.data);
-      setTotal(res.total);
+
+      setLogs(res.data || []);
+      setTotal(res.total || 0);
     } catch {
       setError('Không thể tải lịch sử đăng nhập.');
     } finally {
       setLoading(false);
     }
-  }, [page, targetUserId]);
+  }, [page, targetUserId, searchTerm, filter]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
-  const displayed    = filter ? logs.filter(l => l.status === filter) : logs;
-  const totalPages   = Math.ceil(total / LIMIT);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setPage(1);
+    fetchLogs();
+  };
 
-  const s = {
-    page: {
-      minHeight: '100vh', background: '#080E1A',
-      fontFamily: "'DM Sans','Segoe UI',sans-serif", color: '#F1F5F9',
-    },
-    inner:  { maxWidth: 1100, margin: '0 auto', padding: '32px 24px' },
-    header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
-    title:  { fontSize: 24, fontWeight: 800, letterSpacing: '-0.4px', margin: 0 },
-    sub:    { fontSize: 14, color: '#64748B', marginTop: 4 },
-    back:   {
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      color: '#64748B', textDecoration: 'none', fontSize: 14, marginBottom: 20,
-    },
-    filterBar: { display: 'flex', gap: 8, marginBottom: 20 },
-    filterBtn: (active) => ({
-      padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-      cursor: 'pointer', fontFamily: 'inherit', border: '1.5px solid',
-      background:   active ? 'rgba(37,99,235,0.15)' : 'rgba(255,255,255,0.04)',
-      color:        active ? '#93C5FD'              : '#64748B',
-      borderColor:  active ? 'rgba(37,99,235,0.4)'  : 'rgba(255,255,255,0.08)',
-      transition: 'all 0.15s',
-    }),
-    table: {
-      width: '100%', borderCollapse: 'collapse',
-      background: 'rgba(13,20,36,0.7)',
-      border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden',
-    },
-    th: {
-      padding: '11px 16px', textAlign: 'left', fontSize: 11,
-      fontWeight: 700, color: '#475569', letterSpacing: '0.07em',
-      textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.06)',
-      background: 'rgba(255,255,255,0.02)',
-    },
-    td: { padding: '12px 16px', fontSize: 13, color: '#CBD5E1', borderBottom: '1px solid rgba(255,255,255,0.04)' },
-    mono: { fontFamily: 'Courier New, monospace', fontSize: 12, color: '#64748B' },
-    pg: {
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      marginTop: 16, fontSize: 13, color: '#64748B',
-    },
-    pgBtn: (disabled) => ({
-      padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-      background: 'rgba(255,255,255,0.05)', color: disabled ? '#334155' : '#94A3B8',
-      border: '1px solid rgba(255,255,255,0.08)', cursor: disabled ? 'not-allowed' : 'pointer',
-      fontFamily: 'inherit',
-    }),
+  const handleFilter = (value) => {
+    setFilter(value);
+    setPage(1);
+  };
+
+  const totalPages = Math.ceil(total / LIMIT);
+
+  const getStatusBadge = (status) => {
+    const success = status === 'success';
+    return (
+      <Badge variant={success ? 'success' : 'danger'} className="!rounded-none !shadow-none font-bold">
+        <span className="inline-flex items-center gap-2">
+          {success ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+          {success ? 'Thành công' : 'Thất bại'}
+        </span>
+      </Badge>
+    );
   };
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap'); *,*::before,*::after{box-sizing:border-box} body{margin:0}`}</style>
-      <div style={s.page}>
-        <div style={s.inner}>
+    <div className="bg-white min-h-screen p-1">
+      <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+        {/* Back */}
+        <Link
+          to={targetUserId ? `/users/${targetUserId}` : '/users'}
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {targetUserId ? 'Quay lại chi tiết nhân viên' : 'Quay lại danh sách nhân viên'}
+        </Link>
 
-          <Link to="/users" style={s.back}>← Quay lại danh sách nhân viên</Link>
-
-          <div style={s.header}>
-            <div>
-              <h1 style={s.title}>
-                {targetUserId ? 'Lịch sử đăng nhập' : 'Lịch sử đăng nhập hệ thống'}
-              </h1>
-              <p style={s.sub}>{total} bản ghi</p>
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div style={s.filterBar}>
-            {[['', 'Tất cả'], ['success', '✓ Thành công'], ['failed', '✗ Thất bại']].map(([v, l]) => (
-              <button key={v} style={s.filterBtn(filter === v)} onClick={() => setFilter(v)}>{l}</button>
-            ))}
-          </div>
-
-          {error && (
-            <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, color: '#FCA5A5', marginBottom: 16 }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  {['Nhân viên', 'Vai trò', 'Kết quả', 'IP Address', 'Thời gian'].map(h => (
-                    <th key={h} style={s.th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={5} style={{ ...s.td, textAlign: 'center', padding: 40, color: '#475569' }}>Đang tải…</td></tr>
-                ) : displayed.length === 0 ? (
-                  <tr><td colSpan={5} style={{ ...s.td, textAlign: 'center', padding: 40, color: '#475569' }}>Không có dữ liệu</td></tr>
-                ) : displayed.map((log, i) => (
-                  <tr key={log.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                    <td style={s.td}>
-                      <div style={{ fontWeight: 600, color: '#F1F5F9', fontSize: 13 }}>{log.full_name}</div>
-                      <div style={{ fontSize: 12, color: '#64748B' }}>{log.email}</div>
-                    </td>
-                    <td style={s.td}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: ROLE_COLORS[log.role] }}>
-                        {ROLE_LABELS[log.role] || log.role}
-                      </span>
-                    </td>
-                    <td style={s.td}><LogBadge status={log.status} /></td>
-                    <td style={{ ...s.td, ...s.mono }}>{log.ip_address || '—'}</td>
-                    <td style={{ ...s.td, ...s.mono }}>
-                      {new Date(log.created_at).toLocaleString('vi-VN')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {totalPages > 1 && (
-            <div style={s.pg}>
-              <span>Trang {page} / {totalPages}</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={s.pgBtn(page <= 1)} disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Trước</button>
-                <button style={s.pgBtn(page >= totalPages)} disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Sau →</button>
-              </div>
-            </div>
-          )}
-
+        {/* Header */}
+        <div className="border-b border-gray-200 pb-6">
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">
+            {targetUserId ? 'Lịch sử đăng nhập' : 'Lịch sử đăng nhập hệ thống'}
+          </h1>
+          <p className="text-lg text-gray-600">
+            {total} bản ghi đăng nhập
+          </p>
         </div>
+
+        {/* Filters */}
+        <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <div className="p-6 space-y-5">
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-center">
+              <form onSubmit={handleSearch} className="flex-1 flex gap-3">
+                <div className="flex-1">
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Tìm theo email..."
+                    icon={Search}
+                    className="!rounded-none"
+                  />
+                </div>
+                <Button type="submit" variant="primary" className="!rounded-none px-6">
+                  Tìm kiếm
+                </Button>
+              </form>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant={filter === '' ? 'primary' : 'secondary'}
+                className="!rounded-none px-5"
+                onClick={() => handleFilter('')}
+              >
+                Tất cả
+              </Button>
+              <Button
+                type="button"
+                variant={filter === 'success' ? 'primary' : 'secondary'}
+                className="!rounded-none px-5"
+                onClick={() => handleFilter('success')}
+              >
+                Thành công
+              </Button>
+              <Button
+                type="button"
+                variant={filter === 'failed' ? 'primary' : 'secondary'}
+                className="!rounded-none px-5"
+                onClick={() => handleFilter('failed')}
+              >
+                Thất bại
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Error */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Table */}
+        <Card className="border border-gray-200 !rounded-none !shadow-none overflow-hidden">
+          {loading ? (
+            <div className="p-16 flex justify-center">
+              <Loading />
+            </div>
+          ) : logs.length === 0 ? (
+            <EmptyState
+              icon={UserRound}
+              title="Không có dữ liệu"
+              description="Chưa có bản ghi đăng nhập nào phù hợp với bộ lọc hiện tại."
+              className="py-20"
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    {['Nhân viên', 'Vai trò', 'Kết quả', 'IP Address', 'Thời gian'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {logs.map((log, i) => (
+                    <tr key={log.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1">
+                          <div className="font-semibold text-gray-900 text-sm">
+                            {log.full_name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {log.email}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <Badge
+                          variant={ROLE_VARIANTS[log.role] || 'gray'}
+                          className="!rounded-none !shadow-none font-bold"
+                        >
+                          {ROLE_LABELS[log.role] || log.role}
+                        </Badge>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {getStatusBadge(log.status)}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-700 font-mono">
+                        {log.ip_address || '—'}
+                      </td>
+
+                      <td className="px-6 py-4 text-sm text-gray-700 font-mono">
+                        {log.created_at ? new Date(log.created_at).toLocaleString('vi-VN') : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!loading && logs.length > 0 && totalPages > 1 && (
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={total}
+                itemsPerPage={LIMIT}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </Card>
       </div>
-    </>
+    </div>
   );
 };
 

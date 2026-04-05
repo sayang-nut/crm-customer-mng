@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/authContext';
 import usersService from '../../services/usersService';
 import UserAddForm from './UserAddForm';
+import UserEditForm from './UserEditForm';
 import { Link } from 'react-router-dom';
 
 // ── Constants ─────────────────────────────────────────────────────
@@ -31,7 +32,6 @@ const STATUS_COLORS = {
 };
 const STATUS_LABELS = { 
   active: 'Hoạt động', 
-  inactive: 'Tạm dừng', 
   locked: 'Bị khoá' 
 };
 
@@ -63,103 +63,6 @@ const Avatar = ({ name, size = 40 }) => {
       }}
     >
       {initials}
-    </div>
-  );
-};
-
-//Modal: Tạo / Chỉnh sửa user 
-const UserModal = ({ user, onClose, onSaved }) => {
-  // This modal is now only for editing.
-  const [form, setForm] = useState({
-    fullName: user?.full_name || '',
-    email: user?.email || '',
-    role: user?.role || 'sales',
-    password: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const setField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true); 
-    setError('');
-    try {
-      await usersService.update(user.id, {
-        fullName: form.fullName,
-        role: form.role,
-      });
-      onSaved();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Có lỗi xảy ra.');
-    } finally { 
-      setLoading(false); 
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-6 z-50" 
-         onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Chỉnh sửa nhân viên
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-        </div>
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Họ tên *</label>
-            <input 
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" 
-              value={form.fullName}
-              onChange={e => setField('fullName', e.target.value)} 
-              required 
-              placeholder="Nguyễn Văn A" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Vai trò *</label>
-            <select 
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all cursor-pointer" 
-              value={form.role}
-              onChange={e => setField('role', e.target.value)}
-            >
-              {ROLES.map(r => (
-                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-              ))}
-            </select>
-          </div>
-
-          
-
-          <div className="flex gap-4 justify-end pt-4 border-t border-gray-200">
-            <button 
-              type="button" 
-              className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all" 
-              onClick={onClose}
-            >
-              Huỷ
-            </button>
-            <button 
-              type="submit" 
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50" 
-              disabled={loading}
-            >
-              {loading ? 'Đang lưu…' : 'Cập nhật'}
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 };
@@ -339,14 +242,13 @@ const UsersPage = () => {
             <button 
               className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all duration-200 flex items-center gap-2 disabled:bg-gray-400 disabled:shadow-none"
               onClick={() => setIsAdding(true)}
-              disabled={isAdding}
+              disabled={isAdding || !!editUser}
             >
               <span>+</span> Thêm nhân viên
             </button>
           )}
         </div>
 
-        {/* Add User Form (Inline) */}
         {isAdmin && isAdding && (
           <UserAddForm 
             onCancel={() => setIsAdding(false)}
@@ -357,6 +259,19 @@ const UsersPage = () => {
           />
         )}
 
+        {editUser && (
+          <UserEditForm 
+            user={editUser}
+            onCancel={() => setEditUser(null)}
+            onSaved={() => {
+              setEditUser(null);
+              fetchUsers();
+            }}
+          />
+        )}
+
+        {!isAdding && !editUser && (
+          <>
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
           <input
@@ -382,7 +297,6 @@ const UsersPage = () => {
           >
             <option value="">Tất cả trạng thái</option>
             <option value="active">Hoạt động</option>
-            <option value="inactive">Tạm dừng</option>
             <option value="locked">Bị khoá</option>
           </select>
         </div>
@@ -465,7 +379,7 @@ const UsersPage = () => {
                               Sửa
                             </button>
                     <Link 
-                      to={`/login-logs?userId=${u.id}`}
+                      to={`/users/login-logs?userId=${u.id}`}
                       className="px-4 py-2 bg-purple-100 text-purple-700 font-semibold rounded-lg hover:bg-purple-200 transition-all text-sm flex items-center"
                     >
                       Lịch sử ĐN
@@ -521,15 +435,10 @@ const UsersPage = () => {
             </div>
           )}
         </div>
+          </>
+        )}
 
         {/* Modals */}
-        {editUser !== null && (
-          <UserModal 
-            user={editUser} 
-            onClose={() => setEditUser(null)} 
-            onSaved={() => { setEditUser(null); fetchUsers(); }} 
-          />
-        )}
         {resetUser !== null && (
           <ResetPwModal 
             user={resetUser} 
