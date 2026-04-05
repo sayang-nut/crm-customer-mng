@@ -80,7 +80,6 @@ const CustomerDetailPage = () => {
 
   const representativeName =
     currentCustomer.representative_name ||
-    currentCustomer.representative_name ||
     primaryContact.full_name ||
     'Chưa cập nhật';
   const representativePosition =
@@ -96,17 +95,11 @@ const CustomerDetailPage = () => {
     primaryContact.phone ||
     'Chưa cập nhật';
 
-  // Mock data (giữ nguyên)
-  const contracts = [{ id: 1, solution: 'Bado Retail', package: 'Gói Chuyên nghiệp', startDate: '2024-01-01', endDate: '2024-12-31', value: 15000000, status: 'active' }];
-  const tickets = [
-    { id: 1, title: 'Lỗi đồng bộ dữ liệu', priority: 'high', status: 'processing', createdAt: '2024-01-15' },
-    { id: 2, title: 'Yêu cầu hướng dẫn sử dụng', priority: 'medium', status: 'resolved', createdAt: '2024-01-10' },
-  ];
-  const activities = [
-    { id: 1, type: 'status_change', description: 'Chuyển trạng thái từ Lead sang Active', user: 'Nguyễn Văn A', time: '2 ngày trước' },
-    { id: 2, type: 'contract', description: 'Ký hợp đồng Gói Chuyên nghiệp', user: 'Nguyễn Văn A', time: '3 ngày trước' },
-    { id: 3, type: 'contact', description: 'Gọi điện tư vấn sản phẩm', user: 'Nguyễn Văn A', time: '1 tuần trước' },
-  ];
+  // Dữ liệu thật từ Backend
+  const contracts = currentCustomer.contracts || [];
+  const tickets = currentCustomer.tickets || [];
+  const activities = currentCustomer.activities || [];
+  const totalRevenue = currentCustomer.totalRevenue || 0;
 
   return (
     <div className="bg-white min-h-full space-y-8 p-1">  
@@ -140,7 +133,7 @@ const CustomerDetailPage = () => {
                   {statusConfig.label}
                 </Badge>
                 <span className="text-sm text-gray-600 font-medium">
-                  MST: {currentCustomer.tax_code}
+                  MST: {currentCustomer.tax_code || 'Chưa cập nhật'}
                 </span>
                 <span className="text-sm text-gray-500">•</span>
                 <span className="text-sm text-gray-600 font-medium">
@@ -231,7 +224,7 @@ const CustomerDetailPage = () => {
                       Mã số thuế
                     </label>
                     <p className="text-lg font-semibold text-dark-900">
-                      {currentCustomer.tax_code}
+                      {currentCustomer.tax_code || <span className="text-gray-400 font-normal">Chưa cập nhật</span>}
                     </p>
                   </div>
                   <div>
@@ -239,22 +232,26 @@ const CustomerDetailPage = () => {
                       Ngành nghề
                     </label>
                     <p className="text-lg font-semibold text-dark-900">
-                      {currentCustomer.industry}
+                      {industry}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-2 block">
                       Website
                     </label>
-                    <a
-                      href={currentCustomer.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
-                    >
-                      <Globe className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                      {currentCustomer.website}
-                    </a>
+                    {currentCustomer.website ? (
+                      <a
+                        href={currentCustomer.website.startsWith('http') ? currentCustomer.website : `https://${currentCustomer.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group break-all"
+                      >
+                        <Globe className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform flex-shrink-0" />
+                        {currentCustomer.website}
+                      </a>
+                    ) : (
+                      <p className="text-lg text-gray-400">Chưa cập nhật</p>
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <label className="text-sm font-semibold text-gray-700 mb-2 block">
@@ -262,7 +259,7 @@ const CustomerDetailPage = () => {
                     </label>
                     <p className="text-lg text-dark-900 flex items-start gap-2 bg-gray-50 p-4 rounded-xl">
                       <MapPin className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
-                      <span>{currentCustomer.address}</span>
+                      <span>{currentCustomer.address || <span className="text-gray-400">Chưa cập nhật</span>}</span>
                     </p>
                   </div>
                 </div>
@@ -291,25 +288,33 @@ const CustomerDetailPage = () => {
                     <label className="text-sm font-semibold text-gray-700 mb-2 block">
                       Email
                     </label>
-                    <a
-                      href={`mailto:${representativeEmail}`}
-                      className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
-                    >
-                      <Mail className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                      {representativeEmail}
-                    </a>
+                    {representativeEmail !== 'Chưa cập nhật' ? (
+                      <a
+                        href={`mailto:${representativeEmail}`}
+                        className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group break-all"
+                      >
+                        <Mail className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform flex-shrink-0" />
+                        {representativeEmail}
+                      </a>
+                    ) : (
+                      <p className="text-lg text-gray-400">Chưa cập nhật</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-gray-700 mb-2 block">
                       Số điện thoại
                     </label>
-                    <a
-                      href={`tel:${representativePhone}`}
-                      className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
-                    >
-                      <Phone className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                      {currentCustomer.phone}
-                    </a>
+                    {representativePhone !== 'Chưa cập nhật' ? (
+                      <a
+                        href={`tel:${representativePhone}`}
+                        className="text-primary-600 hover:text-primary-700 font-semibold flex items-center gap-2 group"
+                      >
+                        <Phone className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform flex-shrink-0" />
+                        {representativePhone}
+                      </a>
+                    ) : (
+                      <p className="text-lg text-gray-400">Chưa cập nhật</p>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -330,18 +335,22 @@ const CustomerDetailPage = () => {
           {activeTab === 'contracts' && (
             <Card title="Danh sách hợp đồng" className="shadow-sm">
               <div className="space-y-4">
-                {contracts.map((contract) => (
+                {contracts.length === 0 ? (
+                  <p className="text-gray-500 italic text-center py-6">Khách hàng này chưa có hợp đồng nào.</p>
+                ) : contracts.map((contract) => (
                   <div key={contract.id} className="group p-6 border border-gray-200 hover:border-primary-300 hover:shadow-md rounded-xl transition-all duration-200 cursor-pointer bg-white">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h4 className="text-xl font-black text-dark-900 mb-1">
-                          {contract.solution}
+                          {contract.solution || 'Giải pháp tùy chỉnh'}
                         </h4>
                         <p className="text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-1 rounded-full inline-block">
-                          {contract.package}
+                          {contract.package || 'Gói tùy chọn'}
                         </p>
                       </div>
-                      <Badge variant="success" size="lg">Đang hoạt động</Badge>
+                      <Badge variant={contract.status === 'active' ? 'success' : contract.status === 'expired' ? 'danger' : 'warning'} size="lg">
+                        {contract.status === 'active' ? 'Đang hoạt động' : contract.status === 'expired' ? 'Đã hết hạn' : contract.status}
+                      </Badge>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm divide-y md:divide-y-0 divide-gray-200">
                       <div className="flex flex-col">
@@ -361,6 +370,61 @@ const CustomerDetailPage = () => {
                         <p className="text-2xl font-black text-primary-600 mt-1">
                           {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(contract.value)}
                         </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Tickets Tab */}
+          {activeTab === 'tickets' && (
+            <Card title="Danh sách Tickets hỗ trợ" className="shadow-sm">
+              <div className="space-y-4">
+                {tickets.length === 0 ? (
+                  <p className="text-gray-500 italic text-center py-6">Khách hàng chưa có yêu cầu hỗ trợ nào.</p>
+                ) : tickets.map((ticket) => (
+                  <div key={ticket.id} className="p-5 border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all bg-white cursor-pointer">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-bold text-dark-900 text-lg">{ticket.title}</h4>
+                      <Badge variant={ticket.status === 'resolved' || ticket.status === 'closed' ? 'success' : ticket.status === 'processing' ? 'warning' : 'info'}>
+                        {ticket.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1"><Ticket className="w-4 h-4"/> {ticket.ticket_type || 'Khác'}</span>
+                      <span className="flex items-center gap-1">
+                        Ưu tiên: 
+                        <strong className={ticket.priority === 'urgent' ? 'text-red-600' : ticket.priority === 'high' ? 'text-orange-500' : ''}>
+                          {ticket.priority.toUpperCase()}
+                        </strong>
+                      </span>
+                      <span className="flex items-center gap-1"><Clock className="w-4 h-4"/> {new Date(ticket.createdAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Activities Tab */}
+          {activeTab === 'activities' && (
+            <Card title="Lịch sử hoạt động" className="shadow-sm">
+              <div className="space-y-4">
+                {activities.length === 0 ? (
+                  <p className="text-gray-500 italic text-center py-6">Chưa có hoạt động nào được ghi nhận.</p>
+                ) : activities.map((act) => (
+                  <div key={act.id} className="flex gap-4 p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-800 font-medium">{act.description}</p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                        <span className="font-semibold text-gray-700">{act.user}</span>
+                        <span>•</span>
+                        <span>{new Date(act.time).toLocaleString('vi-VN')}</span>
                       </div>
                     </div>
                   </div>
@@ -402,33 +466,44 @@ const CustomerDetailPage = () => {
                   </div>
                   <span className="text-sm font-semibold text-gray-800">Doanh thu</span>
                 </div>
-                <span className="text-2xl font-black text-blue-700">
-                  15T
+                <span className="text-2xl font-black text-blue-700 truncate max-w-[150px]" title={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue)}>
+                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue)}
                 </span>
               </div>
             </div>
           </Card>
 
-          <Card title="Nhân viên phụ trách" className="shadow-sm">
+          <Card title="Nhân sự phụ trách" className="shadow-sm">
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-white font-bold text-sm">A</span>
+              {currentCustomer.assigned_to_name ? (
+                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                    <span className="text-white font-bold text-sm">
+                      {currentCustomer.assigned_to_name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-dark-900 text-sm truncate">{currentCustomer.assigned_to_name}</p>
+                    <p className="text-xs text-gray-600 font-medium">Sales phụ trách</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-dark-900 text-sm">Nguyễn Văn A</p>
-                  <p className="text-xs text-gray-600 font-medium">Sales</p>
+              ) : (
+                <p className="text-sm text-gray-500 italic">Chưa phân công Sales</p>
+              )}
+              
+              {currentCustomer.created_by_name && (
+                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                    <span className="text-white font-bold text-sm">
+                      {currentCustomer.created_by_name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-dark-900 text-sm truncate">{currentCustomer.created_by_name}</p>
+                    <p className="text-xs text-gray-600 font-medium">Người tạo</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-md">
-                  <span className="text-white font-bold text-sm">C</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-dark-900 text-sm">Lê Văn C</p>
-                  <p className="text-xs text-gray-600 font-medium">CSKH</p>
-                </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>

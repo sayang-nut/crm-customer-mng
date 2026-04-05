@@ -49,6 +49,45 @@ const _getById = async (id) => {
 
   const primaryContact = contacts.find((ct) => ct.is_primary === 1) || contacts[0] || {};
 
+  // 1. Lấy danh sách hợp đồng
+  const [contracts] = await sequelize.query(
+    `SELECT c.id, c.contract_number, c.start_date AS startDate, c.end_date AS endDate,
+            c.final_value AS value, c.status,
+            s.name AS solution, sp.name AS package
+     FROM contracts c
+     LEFT JOIN solutions s ON s.id = c.solution_id
+     LEFT JOIN service_packages sp ON sp.id = c.package_id
+     WHERE c.customer_id = ? ORDER BY c.created_at DESC`,
+    { replacements: [Number(id)] }
+  );
+
+  // 2. Lấy danh sách tickets
+  const [tickets] = await sequelize.query(
+    `SELECT t.id, t.title, t.priority, t.status, t.created_at AS createdAt,
+            tt.name AS ticket_type
+     FROM tickets t
+     LEFT JOIN ticket_types tt ON tt.id = t.ticket_type_id
+     WHERE t.customer_id = ? ORDER BY t.created_at DESC`,
+    { replacements: [Number(id)] }
+  );
+
+  // 3. Lấy lịch sử hoạt động (ví dụ: chuyển trạng thái)
+  const [activities] = await sequelize.query(
+    `SELECT h.id, 'status_change' AS type,
+            CONCAT('Chuyển trạng thái từ ', IFNULL(h.from_status, 'Tạo mới'), ' sang ', h.to_status) AS description,
+            u.full_name AS user, h.created_at AS time
+     FROM customer_status_history h
+     LEFT JOIN users u ON u.id = h.changed_by
+     WHERE h.customer_id = ? ORDER BY h.created_at DESC`,
+    { replacements: [Number(id)] }
+  );
+
+  // 4. Tính tổng doanh thu (Tổng số tiền khách đã thanh toán)
+  const [[revenueResult]] = await sequelize.query(
+    `SELECT SUM(amount) as totalRevenue FROM revenues WHERE customer_id = ?`,
+    { replacements: [Number(id)] }
+  );
+
   return {
     ...customer,
     industry: customer.industry || null,
@@ -57,6 +96,10 @@ const _getById = async (id) => {
     email: primaryContact.email || null,
     phone: primaryContact.phone || null,
     contacts,
+    contracts,
+    tickets,
+    activities,
+    totalRevenue: Number(revenueResult?.totalRevenue || 0),
   };
 };
 

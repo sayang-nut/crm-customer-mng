@@ -1,12 +1,12 @@
 /**
  * @file     frontend/src/pages/contracts/ContractsPage.jsx
- * @theme    WHITE PLAIN - Sync with RevenuesPage
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/authContext';
 import contractsService from '../../services/contractsService';
 import solutionsService from '../../services/solutionsService';
+import ContractAddForm from './ContractAddForm';
 
 // ── Helpers ───────────────────────────────────────────────────────
 const fmtVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', notation: 'compact', maximumFractionDigits: 1 }).format(n || 0);
@@ -249,32 +249,20 @@ const ContractsPage = () => {
 
       {/* Create Modal */}
       {modal.type === 'create' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-6 z-50" onClick={e => e.target === e.currentTarget && setModal({type: null})}>
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-8">
+         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 md:p-6 z-50" onClick={e => e.target === e.currentTarget && setModal({type: null})}>
+          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-5xl w-full max-h-[95vh] overflow-y-auto shadow-2xl">
+                   <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Tạo hợp đồng mới</h2>
               <button onClick={() => setModal({type: null})} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
             </div>
-            <form className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Số hợp đồng *</label>
-                  <input className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Customer ID *</label>
-                  <input type="number" className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" />
-                </div>
-              </div>
-              <div className="flex gap-6">
-                <button type="button" className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all flex-1" onClick={() => setModal({type: null})}>
-                  Huỷ
-                </button>
-                <button type="submit" className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all flex-1">
-                  Tạo hợp đồng
-                </button>
-              </div>
-            </form>
+           <ContractAddForm 
+              currentUser={user}
+              onCancel={() => setModal({type: null})}
+              onSaved={() => {
+                setModal({type: null});
+                fetchData(); // Tải lại danh sách hợp đồng
+              }}
+            />
           </div>
         </div>
       )}
