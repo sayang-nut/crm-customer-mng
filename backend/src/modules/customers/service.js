@@ -168,7 +168,7 @@ const createCustomer = async (data, userId) => {
     }
   );
 
-  const customerId = result.insertId;
+  const customerId = result; // Sửa lỗi lấy insertId từ sequelize raw query
 
   // Ghi status history: tạo mới → lead
   await sequelize.query(
@@ -300,9 +300,7 @@ const updateCustomer = async (id, data, user) => {
   return _getById(id);
 };
 
-// ─────────────────────────────────────────────────────────────────
 // changeStatus
-// ─────────────────────────────────────────────────────────────────
 const changeStatus = async (id, newStatus, reason, userId) => {
   const [[customer]] = await sequelize.query(
     `SELECT id, status FROM customers WHERE id = ? LIMIT 1`,
@@ -328,7 +326,6 @@ const changeStatus = async (id, newStatus, reason, userId) => {
   return _getById(id);
 };
 
-// ─────────────────────────────────────────────────────────────────
 // deleteCustomer
 const deleteCustomer = async (id, user) => {
   const [[customer]] = await sequelize.query(

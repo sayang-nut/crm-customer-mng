@@ -1,12 +1,12 @@
 /**
  * @file     frontend/src/pages/users/UsersPage.jsx
- * @theme    WHITE PLAIN - Sync with ContractsPage/TicketsPage
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/authContext';
 import usersService from '../../services/usersService';
 import UserAddForm from './UserAddForm';
+import { Link } from 'react-router-dom';
 
 // ── Constants ─────────────────────────────────────────────────────
 const ROLES = ['admin', 'manager', 'sales', 'cskh', 'technical'];
@@ -67,7 +67,7 @@ const Avatar = ({ name, size = 40 }) => {
   );
 };
 
-// ── Modal: Tạo / Chỉnh sửa user ───────────────────────────────────
+//Modal: Tạo / Chỉnh sửa user 
 const UserModal = ({ user, onClose, onSaved }) => {
   // This modal is now only for editing.
   const [form, setForm] = useState({
@@ -75,7 +75,6 @@ const UserModal = ({ user, onClose, onSaved }) => {
     email: user?.email || '',
     role: user?.role || 'sales',
     password: '',
-    telegramChatId: user?.telegram_chat_id || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -90,7 +89,6 @@ const UserModal = ({ user, onClose, onSaved }) => {
       await usersService.update(user.id, {
         fullName: form.fullName,
         role: form.role,
-        telegramChatId: form.telegramChatId || null,
       });
       onSaved();
     } catch (err) {
@@ -142,15 +140,7 @@ const UserModal = ({ user, onClose, onSaved }) => {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Telegram Chat ID</label>
-            <input 
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" 
-              value={form.telegramChatId}
-              onChange={e => setField('telegramChatId', e.target.value)} 
-              placeholder="Tuỳ chọn" 
-            />
-          </div>
+          
 
           <div className="flex gap-4 justify-end pt-4 border-t border-gray-200">
             <button 
@@ -297,17 +287,25 @@ const UsersPage = () => {
     setLoading(true); 
     setError('');
     try {
-      const res = await usersService.list({ 
-        page, 
-        limit: LIMIT, 
-        search, 
-        role: roleFilter, 
-        status: statusFilter 
-      });
-      setUsers(res.data);
-      setTotal(res.total);
-    } catch { 
-      setError('Không thể tải danh sách nhân viên.'); 
+      // Bỏ các params rỗng để tránh backend query sai
+      const params = { page, limit: LIMIT };
+      if (search.trim()) params.search = search.trim();
+      if (roleFilter) params.role = roleFilter;
+      if (statusFilter) params.status = statusFilter;
+
+      const fetchFn = usersService.list || usersService.getUsers || usersService.getAll;
+      const res = await fetchFn(params);
+      
+      // Xử lý an toàn cấu trúc trả về từ backend (tránh lỗi bọc payload của Axios)
+      const items = res?.data?.data || res?.data || [];
+      const totalItems = res?.data?.total || res?.total || res?.pagination?.total || items.length || 0;
+      
+      setUsers(items);
+      setTotal(totalItems);
+    } catch (err) { 
+      console.error('[UsersPage] API Error:', err);
+      const msg = err?.response?.data?.message || 'Không thể tải danh sách nhân viên. Vui lòng kiểm tra API hoặc kết nối.';
+      setError(msg); 
     } finally { 
       setLoading(false); 
     }
@@ -419,6 +417,12 @@ const UsersPage = () => {
                       </div>
                     </td>
                   </tr>
+        ) : error ? (
+          <tr>
+            <td colSpan={5} className="px-6 py-12 text-center text-red-500 font-medium">
+              Đã xảy ra lỗi khi tải dữ liệu. Vui lòng làm mới trang.
+            </td>
+          </tr>
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
@@ -453,13 +457,19 @@ const UsersPage = () => {
                       </td>
                       <td className="px-6 py-4">
                         {isAdmin && (
-                          <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                             <button 
                               className="px-4 py-2 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition-all text-sm"
                               onClick={() => setEditUser(u)}
                             >
                               Sửa
                             </button>
+                    <Link 
+                      to={`/login-logs?userId=${u.id}`}
+                      className="px-4 py-2 bg-purple-100 text-purple-700 font-semibold rounded-lg hover:bg-purple-200 transition-all text-sm flex items-center"
+                    >
+                      Lịch sử ĐN
+                    </Link>
                             <button 
                               className="px-4 py-2 bg-yellow-100 text-yellow-700 font-semibold rounded-lg hover:bg-yellow-200 transition-all text-sm"
                               onClick={() => setResetUser(u)}

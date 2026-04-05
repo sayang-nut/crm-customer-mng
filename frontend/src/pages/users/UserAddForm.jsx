@@ -17,7 +17,6 @@ const UserAddForm = ({ onSaved, onCancel }) => {
     email: '',
     role: 'sales',
     password: '',
-    telegramChatId: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +37,6 @@ const UserAddForm = ({ onSaved, onCancel }) => {
         email: form.email,
         role: form.role,
         password: form.password || undefined,
-        telegramChatId: form.telegramChatId || undefined,
       });
       onSaved();
     } catch (err) {

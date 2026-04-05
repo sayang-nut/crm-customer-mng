@@ -36,7 +36,7 @@ const logger     = require('@config/logger');
 const _getById = async (id) => {
   const [[user]] = await sequelize.query(
     `SELECT id, full_name, email, role, status,
-            avatar_url, telegram_chat_id, last_login_at,
+            avatar_url, last_login_at,
             created_at, updated_at
      FROM users WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
@@ -89,7 +89,7 @@ const listUsers = async ({ page = 1, limit = 20, status, role, search } = {}) =>
 
   const [users] = await sequelize.query(
     `SELECT id, full_name, email, role, status,
-            avatar_url, telegram_chat_id, last_login_at,
+            avatar_url, last_login_at,
             created_at, updated_at
      FROM users
      WHERE ${where}
@@ -117,7 +117,7 @@ const getUserById = async (id) => _getById(id);
  * Mật khẩu mặc định: Bado@123 nếu không truyền password.
  * Sau khi tạo: trả về user đầy đủ (không có hash).
  */
-const createUser = async ({ fullName, email, role, password, avatarUrl, telegramChatId }) => {
+const createUser = async ({ fullName, email, role, password, avatarUrl }) => {
   // Kiểm tra email trùng
   const [[existing]] = await sequelize.query(
     `SELECT id FROM users WHERE email = ? LIMIT 1`,
@@ -128,8 +128,8 @@ const createUser = async ({ fullName, email, role, password, avatarUrl, telegram
   const hash = await bcrypt.hash(password || 'Bado@123', 12);
 
   const [result] = await sequelize.query(
-    `INSERT INTO users (full_name, email, password_hash, role, avatar_url, telegram_chat_id, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'active')`,
+    `INSERT INTO users (full_name, email, password_hash, role, avatar_url, status)
+     VALUES (?, ?, ?, ?, ?, 'active')`,
     {
       replacements: [
         fullName.trim(),
@@ -137,20 +137,19 @@ const createUser = async ({ fullName, email, role, password, avatarUrl, telegram
         hash,
         role,
         avatarUrl    || null,
-        telegramChatId || null,
       ],
     }
   );
 
-  logger.info(`[USERS] Created user id=${result.insertId} email=${email} role=${role}`);
-  return _getById(result.insertId);
+  logger.info(`[USERS] Created user id=${result} email=${email} role=${role}`);
+  return _getById(result);
 };
 
 /**
  * Cập nhật thông tin nhân viên (Admin only).
  * Chỉ update các field được truyền vào (partial update).
  */
-const updateUser = async (id, { fullName, role, status, avatarUrl, telegramChatId }) => {
+const updateUser = async (id, { fullName, role, status, avatarUrl }) => {
   await _getById(id); // throws 404 nếu không tìm thấy
 
   const fields = [];
@@ -160,7 +159,6 @@ const updateUser = async (id, { fullName, role, status, avatarUrl, telegramChatI
   if (role          !== undefined) { fields.push('role = ?');             values.push(role); }
   if (status        !== undefined) { fields.push('status = ?');           values.push(status); }
   if (avatarUrl     !== undefined) { fields.push('avatar_url = ?');       values.push(avatarUrl); }
-  if (telegramChatId !== undefined) { fields.push('telegram_chat_id = ?'); values.push(telegramChatId); }
 
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
 
@@ -217,13 +215,12 @@ const toggleStatus = async (id, status, adminId) => {
  * Nhân viên tự cập nhật profile (fullName, avatar, telegramChatId).
  * Không được đổi role / status qua endpoint này.
  */
-const updateProfile = async (userId, { fullName, avatarUrl, telegramChatId }) => {
+const updateProfile = async (userId, { fullName, avatarUrl }) => {
   const fields = [];
   const values = [];
 
   if (fullName      !== undefined) { fields.push('full_name = ?');        values.push(fullName.trim()); }
   if (avatarUrl     !== undefined) { fields.push('avatar_url = ?');       values.push(avatarUrl); }
-  if (telegramChatId !== undefined) { fields.push('telegram_chat_id = ?'); values.push(telegramChatId); }
 
   if (fields.length > 0) {
     await sequelize.query(
