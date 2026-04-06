@@ -162,13 +162,10 @@ const createRevenue = async (data, userId) => {
     }
   );
 
-  logger.info(`[REVENUES] Created id=${result.insertId} amount=${amount} by user=${userId}`);
-  return _getById(result.insertId);
+  logger.info(`[REVENUES] Created id=${result} amount=${amount} by user=${userId}`);
+  return _getById(result);
 };
-
-// ─────────────────────────────────────────────────────────────────
 // updateRevenue  (tác giả hoặc Admin)
-// ─────────────────────────────────────────────────────────────────
 const updateRevenue = async (id, data, user) => {
   const [[rev]] = await sequelize.query(
     `SELECT id, created_by FROM revenues WHERE id = ? LIMIT 1`,

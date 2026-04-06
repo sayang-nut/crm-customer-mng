@@ -232,8 +232,8 @@ const createContract = async (data, userId) => {
     logger.info(`[CONTRACTS] Customer ${customerId} auto-activated via new contract`);
   }
 
-  logger.info(`[CONTRACTS] Created contract id=${result.insertId} no=${contractNumber}`);
-  return _getById(result.insertId);
+  logger.info(`[CONTRACTS] Created contract id=${result} no=${contractNumber}`);
+  return _getById(result);
 };
 
 // ─────────────────────────────────────────────────────────────────

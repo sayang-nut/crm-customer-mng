@@ -1,28 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, User, Phone, Mail, Package, Calendar, DollarSign, Calculator } from 'lucide-react';
-// Giả định bạn có các services này, có thể thay đổi đường dẫn import cho đúng với project của bạn
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Building2,
+  User,
+  Phone,
+  Mail,
+  Package,
+  DollarSign,
+  Calculator,
+  ArrowLeft,
+} from 'lucide-react';
+import { useAuth } from '../../store/authContext';
 import contractsService from '../../services/contractsService';
 import customerService from '../../services/customerService';
 import solutionsService from '../../services/solutionsService';
-import usersService from '../../services/usersService';
 
-const fmtVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import Card from '../../components/common/Card';
+import Loading from '../../components/common/Loading';
 
-const ContractAddForm = ({ onCancel, onSaved, currentUser }) => {
-  // Data sources
+const fmtVND = (n) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
+
+const ContractAddForm = ({ onCancel, onSaved }) => {
+  const { user: currentUser } = useAuth();
+
   const [customers, setCustomers] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [packages, setPackages] = useState([]);
   const [salesUsers, setSalesUsers] = useState([]);
 
-  // Loading state
   const [loadingData, setLoadingData] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Form state
   const [form, setForm] = useState({
-    contractNumber: `HD-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, // Auto-generate mã
+    contractNumber: `HD-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
     customerId: '',
     solutionId: '',
     packageId: '',
@@ -32,60 +45,69 @@ const ContractAddForm = ({ onCancel, onSaved, currentUser }) => {
     value: 0,
     discount: 0,
     finalValue: 0,
-    assignedTo: currentUser?.role === 'sales' ? currentUser.id : '', // Sales tự tạo thì assign mặc định cho mình
-    notes: ''
+    assignedTo: currentUser?.role === 'sales' ? currentUser.id : '',
+    notes: '',
   });
 
-  // Computed objects for UI display
-  const selectedCustomer = customers.find(c => c.id === Number(form.customerId));
-  const selectedPackage = packages.find(p => p.id === Number(form.packageId));
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === Number(form.customerId)),
+    [customers, form.customerId]
+  );
+
+  const selectedPackage = useMemo(
+    () => packages.find((p) => p.id === Number(form.packageId)),
+    [packages, form.packageId]
+  );
+
+  const availablePackages = useMemo(
+    () => packages.filter((p) => p.solution_id === Number(form.solutionId)),
+    [packages, form.solutionId]
+  );
 
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
         setLoadingData(true);
-        // Gọi đồng thời các API lấy dữ liệu danh mục
         const [custRes, solRes, pkgRes, usersRes] = await Promise.all([
-          customerService.getCustomers({ limit: 1000 }), // Lấy KH
-          solutionsService.getSolutions(),                // Lấy giải pháp
-          solutionsService.getPackages(),                 // Lấy gói
-          usersService.listSalesUsers()                   // Lấy danh sách Sales
+          customerService.getCustomers({ page: 1, limit: 100 }),
+          solutionsService.getSolutions(),
+          solutionsService.getPackages(),
+          customerService.getSalesUsers().catch(() => ({ data: [] })),
         ]);
-        
-        setCustomers(custRes.data?.data || custRes.data || []);
-        setSolutions(solRes.data || []);
-        setPackages(pkgRes.data || []);
-        setSalesUsers(usersRes.data || []);
+
+        setCustomers(custRes?.data?.data || custRes?.data || custRes || []);
+        setSolutions(solRes?.data || solRes || []);
+        setPackages(pkgRes?.data || pkgRes || []);
+        setSalesUsers(usersRes?.data || usersRes || []);
       } catch (err) {
         setError('Không thể tải dữ liệu danh mục. Vui lòng thử lại.');
       } finally {
         setLoadingData(false);
       }
     };
+
     fetchMasterData();
   }, []);
 
-  const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+  const setField = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
-  // Auto Calculate Prices when Package or Cycle changes
   useEffect(() => {
     if (selectedPackage) {
-      const price = form.billingCycle === 'yearly' 
-        ? Number(selectedPackage.price_yearly || 0) 
-        : Number(selectedPackage.price_monthly || 0);
+      const price =
+        form.billingCycle === 'yearly'
+          ? Number(selectedPackage.price_yearly || 0)
+          : Number(selectedPackage.price_monthly || 0);
       setField('value', price);
     }
   }, [form.packageId, form.billingCycle, selectedPackage]);
 
-  // Auto Calculate Final Value when Value or Discount changes
   useEffect(() => {
     const val = Number(form.value) || 0;
     const disc = Number(form.discount) || 0;
-    const final = val * (1 - (disc / 100));
+    const final = val * (1 - disc / 100);
     setField('finalValue', Math.round(final));
   }, [form.value, form.discount]);
 
-  // Auto Calculate End Date based on Start Date and Cycle
   useEffect(() => {
     if (form.startDate && form.billingCycle) {
       const start = new Date(form.startDate);
@@ -96,22 +118,23 @@ const ContractAddForm = ({ onCancel, onSaved, currentUser }) => {
         } else {
           end.setMonth(end.getMonth() + 1);
         }
-        end.setDate(end.getDate() - 1); // Trừ 1 ngày
+        end.setDate(end.getDate() - 1);
         setField('endDate', end.toISOString().split('T')[0]);
       }
     }
   }, [form.startDate, form.billingCycle]);
-
-  // Lọc Packages theo Solution đã chọn
-  const availablePackages = packages.filter(p => p.solution_id === Number(form.solutionId));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     setError('');
     try {
-      await contractsService.createContract(form);
-      onSaved(); // Call parent to refresh list and close modal
+      // Tạo payload và xóa các trường rỗng không hợp lệ trước khi gọi API
+      const payload = { ...form };
+      if (!payload.assignedTo) delete payload.assignedTo;
+
+      await contractsService.create(payload);
+      if (onSaved) onSaved(); 
     } catch (err) {
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu hợp đồng.');
     } finally {
@@ -119,189 +142,323 @@ const ContractAddForm = ({ onCancel, onSaved, currentUser }) => {
     }
   };
 
-  if (loadingData) return <div className="p-12 text-center text-gray-500">Đang tải dữ liệu cấu hình...</div>;
+  if (loadingData) {
+    return (
+      <Card className="border border-gray-200 !rounded-none !shadow-none">
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loading text="Đang tải dữ liệu cấu hình..." />
+        </div>
+      </Card>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* BƯỚC 1: CHỌN KHÁCH HÀNG */}
-      <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">1</span> 
-          Thông tin Khách hàng
-        </h3>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Chọn Doanh nghiệp *</label>
-            <select 
-              required
-              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all"
-              value={form.customerId}
-              onChange={e => setField('customerId', e.target.value)}
-            >
-              <option value="">-- Chọn khách hàng --</option>
-              {customers.map(c => <option key={c.id} value={c.id}>{c.company_name} (MST: {c.tax_code || 'N/A'})</option>)}
-            </select>
-          </div>
-
-          {/* Preview Khách hàng đã chọn */}
-          {selectedCustomer && (
-            <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm text-sm flex flex-col gap-2">
-              <div className="flex items-center gap-2 font-semibold text-dark-900"><Building2 className="w-4 h-4 text-blue-500"/> {selectedCustomer.company_name}</div>
-              <div className="flex items-center gap-2 text-gray-600"><User className="w-4 h-4"/> NĐD: {selectedCustomer.representative_name || 'Chưa cập nhật'}</div>
-              <div className="flex items-center gap-4 text-gray-600">
-                <span className="flex items-center gap-1"><Phone className="w-4 h-4"/> {selectedCustomer.phone || 'N/A'}</span>
-                <span className="flex items-center gap-1"><Mail className="w-4 h-4"/> {selectedCustomer.email || 'N/A'}</span>
-              </div>
-            </div>
-          )}
-        </div>
+    <div className="bg-white min-h-full">
+      <div className="mb-8 pb-6 border-b border-gray-200">
+        <button
+          onClick={onCancel}
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors font-medium group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Quay lại danh sách hợp đồng</span>
+        </button>
+        <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">
+          Tạo hợp đồng mới
+        </h1>        
       </div>
 
-      {/* BƯỚC 2: GIẢI PHÁP & GÓI DỊCH VỤ */}
-      <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">2</span> 
-          Sản phẩm & Giải pháp
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Giải pháp phần mềm *</label>
-            <select 
-              required
-              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-400"
-              value={form.solutionId}
-              onChange={e => {
-                setField('solutionId', e.target.value);
-                setField('packageId', ''); // Reset gói khi đổi giải pháp
-              }}
-            >
-              <option value="">-- Chọn giải pháp --</option>
-              {solutions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-
-          <div className="lg:col-span-2">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Gói dịch vụ *</label>
-            <select 
-              required
-              disabled={!form.solutionId}
-              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl focus:border-blue-400 disabled:bg-gray-100"
-              value={form.packageId}
-              onChange={e => setField('packageId', e.target.value)}
-            >
-              <option value="">-- Chọn gói dịch vụ --</option>
-              {availablePackages.map(p => (
-                <option key={p.id} value={p.id}>{p.name} ({p.level.toUpperCase()})</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {selectedPackage && (
-          <div className="mt-4 bg-white p-4 rounded-xl border border-green-100 flex items-center gap-4 text-sm text-green-800">
-            <Package className="w-5 h-5 text-green-600" />
-            <span><strong>Giá tháng:</strong> {fmtVND(selectedPackage.price_monthly)}</span>
-            <span>•</span>
-            <span><strong>Giá năm:</strong> {fmtVND(selectedPackage.price_yearly)}</span>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-none text-sm">
+            {error}
           </div>
         )}
-      </div>
 
-      {/* BƯỚC 3: THỜI HẠN & TÀI CHÍNH */}
-      <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">3</span> 
-          Thời hạn & Tài chính
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Chu kỳ thanh toán *</label>
-            <select 
-              className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl"
-              value={form.billingCycle} onChange={e => setField('billingCycle', e.target.value)}
-            >
-              <option value="yearly">Theo Năm</option>
-              <option value="monthly">Theo Tháng</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Ngày bắt đầu *</label>
-            <input type="date" required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl"
-                   value={form.startDate} onChange={e => setField('startDate', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2 text-blue-600 flex justify-between">Ngày kết thúc <Calculator className="w-4 h-4"/></label>
-            <input type="date" required readOnly className="w-full px-4 py-3 bg-blue-50 text-blue-800 font-semibold border-2 border-blue-100 rounded-xl cursor-not-allowed"
-                   value={form.endDate} title="Tự động tính dựa trên Chu kỳ" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Số hợp đồng *</label>
-            <input required className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl font-mono text-gray-600"
-                   value={form.contractNumber} onChange={e => setField('contractNumber', e.target.value)} />
-          </div>
-        </div>
+        <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <div className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
+                1
+              </span>
+              Thông tin khách hàng
+            </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div>
-            <label className="block text-sm font-semibold text-gray-500 mb-1">Giá trị gốc (VNĐ)</label>
-            <input type="number" required className="w-full text-xl font-bold bg-transparent focus:outline-none border-b-2 border-gray-200 focus:border-blue-500 pb-1"
-                   value={form.value} onChange={e => setField('value', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-500 mb-1">Chiết khấu (%)</label>
-            <input type="number" min="0" max="100" className="w-full text-xl font-bold text-orange-600 bg-transparent focus:outline-none border-b-2 border-gray-200 focus:border-orange-400 pb-1"
-                   value={form.discount} onChange={e => setField('discount', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-500 mb-1 flex items-center gap-1">Giá trị thu thực <DollarSign className="w-4 h-4 text-green-500"/></label>
-            <div className="text-2xl font-black text-green-600 pb-1 border-b-2 border-transparent">
-              {fmtVND(form.finalValue)}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Chọn Doanh nghiệp *
+                </label>
+                <select
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  value={form.customerId}
+                  onChange={(e) => setField('customerId', e.target.value)}
+                >
+                  <option value="">-- Chọn khách hàng --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company_name} (MST: {c.tax_code || 'N/A'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedCustomer && (
+                <div className="border border-gray-200 bg-gray-50 p-4 rounded-none text-sm space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-gray-900">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                    {selectedCustomer.company_name}
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <User className="w-4 h-4" />
+                    NĐD: {selectedCustomer.representative_name || 'Chưa cập nhật'}
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-gray-700">
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="w-4 h-4" />
+                      {selectedCustomer.phone || 'N/A'}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Mail className="w-4 h-4" />
+                      {selectedCustomer.email || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
+        </Card>
 
-      {/* BƯỚC 4: PHÂN CÔNG & LƯU TRỮ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Sales phụ trách hợp đồng</label>
-          <select 
-            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl"
-            value={form.assignedTo} onChange={e => setField('assignedTo', e.target.value)}
+        <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <div className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
+                2
+              </span>
+              Sản phẩm & Giải pháp
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Giải pháp phần mềm *
+                </label>
+                <select
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  value={form.solutionId}
+                  onChange={(e) => {
+                    setField('solutionId', e.target.value);
+                    setField('packageId', '');
+                  }}
+                >
+                  <option value="">-- Chọn giải pháp --</option>
+                  {solutions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Gói dịch vụ *
+                </label>
+                <select
+                  required
+                  disabled={!form.solutionId}
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                  value={form.packageId}
+                  onChange={(e) => setField('packageId', e.target.value)}
+                >
+                  <option value="">-- Chọn gói dịch vụ --</option>
+                  {availablePackages.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({String(p.level).toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedPackage && (
+              <div className="mt-4 border border-gray-200 bg-white p-4 text-sm text-gray-700 flex flex-wrap items-center gap-4">
+                <span className="inline-flex items-center gap-2">
+                  <Package className="w-4 h-4 text-blue-600" />
+                  <strong>Giá tháng:</strong> {fmtVND(selectedPackage.price_monthly)}
+                </span>
+                <span className="text-gray-300">|</span>
+                <span>
+                  <strong>Giá năm:</strong> {fmtVND(selectedPackage.price_yearly)}
+                </span>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <div className="p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
+                3
+              </span>
+              Thời hạn & Tài chính
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Chu kỳ thanh toán *
+                </label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={form.billingCycle}
+                  onChange={(e) => setField('billingCycle', e.target.value)}
+                >
+                  <option value="yearly">Theo Năm</option>
+                  <option value="monthly">Theo Tháng</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Ngày bắt đầu *
+                </label>
+                <input
+                  type="date"
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={form.startDate}
+                  onChange={(e) => setField('startDate', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  Ngày kết thúc
+                  <Calculator className="w-4 h-4 text-blue-600" />
+                </label>
+                <input
+                  type="date"
+                  readOnly
+                  className="w-full px-4 py-3 border border-gray-300 bg-gray-50 text-gray-700 cursor-not-allowed"
+                  value={form.endDate}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Số hợp đồng *
+                </label>
+                <input
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={form.contractNumber}
+                  onChange={(e) => setField('contractNumber', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border border-gray-200 bg-white p-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-500 mb-2">
+                  Giá trị gốc (VNĐ)
+                </label>
+                <input
+                  type="number"
+                  required
+                  className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent"
+                  value={form.value}
+                  onChange={(e) => setField('value', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-500 mb-2">
+                  Chiết khấu (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent"
+                  value={form.discount}
+                  onChange={(e) => setField('discount', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-500 mb-2 flex items-center gap-2">
+                  Giá trị thu thực
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </label>
+                <div className="px-0 py-2 text-2xl font-black text-green-700 border-0 border-b border-transparent">
+                  {fmtVND(form.finalValue)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border border-gray-200 !rounded-none !shadow-none">
+            <div className="p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sales phụ trách hợp đồng
+              </label>
+              <select
+                className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={form.assignedTo}
+                onChange={(e) => setField('assignedTo', e.target.value)}
+              >
+                <option value="">-- Để trống (Chưa phân công) --</option>
+                {salesUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Card>
+
+          <Card className="border border-gray-200 !rounded-none !shadow-none">
+            <div className="p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Ghi chú hợp đồng
+              </label>
+              <textarea
+                className="w-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                rows={4}
+                placeholder="VD: KH yêu cầu thêm tính năng Zalo..."
+                value={form.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+              />
+            </div>
+          </Card>
+        </div>
+
+        <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="!rounded-none px-8"
           >
-            <option value="">-- Để trống (Chưa phân công) --</option>
-            {salesUsers.map(u => <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>)}
-          </select>
+            Huỷ
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSaving}
+            className="!rounded-none px-8"
+          >
+            {isSaving ? 'Đang tạo hợp đồng...' : 'Tạo hợp đồng'}
+          </Button>
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú hợp đồng</label>
-          <input 
-            className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl"
-            placeholder="VD: KH yêu cầu thêm tính năng Zalo..."
-            value={form.notes} onChange={e => setField('notes', e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* ACTIONS */}
-      <div className="flex gap-4 justify-end pt-4 border-t border-gray-200 mt-4 sticky bottom-0 bg-white py-4 z-10">
-        <button type="button" className="px-8 py-3.5 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all" onClick={onCancel} disabled={isSaving}>
-          Huỷ
-        </button>
-        <button type="submit" className="px-8 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center gap-2" disabled={isSaving}>
-          {isSaving ? 'Đang tạo hợp đồng...' : 'Tạo hợp đồng'}
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 };
 
