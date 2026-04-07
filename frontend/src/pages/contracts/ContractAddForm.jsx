@@ -8,6 +8,7 @@ import {
   DollarSign,
   Calculator,
   ArrowLeft,
+  UploadCloud,
 } from 'lucide-react';
 import { useAuth } from '../../store/authContext';
 import contractsService from '../../services/contractsService';
@@ -28,11 +29,11 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
   const [customers, setCustomers] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [packages, setPackages] = useState([]);
-  const [salesUsers, setSalesUsers] = useState([]);
 
   const [loadingData, setLoadingData] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [file, setFile] = useState(null);
 
   const [form, setForm] = useState({
     contractNumber: `HD-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
@@ -45,7 +46,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
     value: 0,
     discount: 0,
     finalValue: 0,
-    assignedTo: currentUser?.role === 'sales' ? currentUser.id : '',
+    assignedTo: currentUser?.id || '',
     notes: '',
   });
 
@@ -68,17 +69,15 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
     const fetchMasterData = async () => {
       try {
         setLoadingData(true);
-        const [custRes, solRes, pkgRes, usersRes] = await Promise.all([
+        const [custRes, solRes, pkgRes] = await Promise.all([
           customerService.getCustomers({ page: 1, limit: 100 }),
           solutionsService.getSolutions(),
           solutionsService.getPackages(),
-          customerService.getSalesUsers().catch(() => ({ data: [] })),
         ]);
 
         setCustomers(custRes?.data?.data || custRes?.data || custRes || []);
         setSolutions(solRes?.data || solRes || []);
         setPackages(pkgRes?.data || pkgRes || []);
-        setSalesUsers(usersRes?.data || usersRes || []);
       } catch (err) {
         setError('Không thể tải dữ liệu danh mục. Vui lòng thử lại.');
       } finally {
@@ -129,11 +128,18 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
     setIsSaving(true);
     setError('');
     try {
-      // Tạo payload và xóa các trường rỗng không hợp lệ trước khi gọi API
-      const payload = { ...form };
-      if (!payload.assignedTo) delete payload.assignedTo;
+      const formData = new FormData();
+      
+      // Đưa các text field vào FormData
+      Object.keys(form).forEach(key => {
+        if (form[key] !== '' && form[key] !== null) {
+          formData.append(key, form[key]);
+        }
+      });
+      
+      if (file) formData.append('file', file);
 
-      await contractsService.create(payload);
+      await contractsService.create(formData);
       if (onSaved) onSaved(); 
     } catch (err) {
       setError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu hợp đồng.');
@@ -401,24 +407,38 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border border-gray-200 !rounded-none !shadow-none">
+            <div className="p-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-blue-600" />
+                Bản cứng hợp đồng (Bắt buộc)
+              </label>
+              <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed cursor-pointer hover:border-blue-500 transition-colors">
+                <div className="space-y-1 text-center">
+                  <input
+                    type="file"
+                    required
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    onChange={(e) => setFile(e.target.files[0])}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">Hỗ trợ PDF, DOCX, Ảnh chụp</p>
+            </div>
+          </Card>
+
           <Card className="border border-gray-200 !rounded-none !shadow-none">
             <div className="p-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Sales phụ trách hợp đồng
               </label>
-              <select
-                className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={form.assignedTo}
-                onChange={(e) => setField('assignedTo', e.target.value)}
-              >
-                <option value="">-- Để trống (Chưa phân công) --</option>
-                {salesUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name} ({u.email})
-                  </option>
-                ))}
-              </select>
+              <div className="w-full px-4 py-3 border border-gray-300 bg-gray-50 text-gray-900 cursor-not-allowed flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">{currentUser?.fullName}</span>
+                <span className="text-gray-500">({currentUser?.email})</span>
+              </div>
             </div>
           </Card>
 

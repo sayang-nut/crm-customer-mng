@@ -23,7 +23,17 @@ const svc = require('./contracts.service');
 const list   = async (req, res, next) => { try { res.json({ success: true, ...(await svc.listContracts(req.user, req.query)) }); } catch (e) { next(e); } };
 const stats  = async (req, res, next) => { try { res.json({ success: true, data: await svc.getStats(req.user) }); } catch (e) { next(e); } };
 const getOne = async (req, res, next) => { try { res.json({ success: true, data: await svc.getContractById(req.params.id, req.user) }); } catch (e) { next(e); } };
-const create = async (req, res, next) => { try { res.status(201).json({ success: true, data: await svc.createContract(req.body, req.user.id) }); } catch (e) { next(e); } };
+const create = async (req, res, next) => { 
+  try { 
+    const data = { ...req.body };
+    if (req.file) {
+      data.attachmentUrl = req.file.path; // Lấy URL từ Cloudinary sau khi upload
+    }
+    res.status(201).json({ success: true, data: await svc.createContract(data, req.user.id) }); 
+  } catch (e) { next(e); } 
+};
+const approve = async (req, res, next) => { try { res.json({ success: true, data: await svc.approveContract(req.params.id, req.user.id) }); } catch (e) { next(e); } };
+const reject  = async (req, res, next) => { try { res.json({ success: true, data: await svc.rejectContract(req.params.id, req.body.reason, req.user.id) }); } catch (e) { next(e); } };
 const update = async (req, res, next) => { try { res.json({ success: true, data: await svc.updateContract(req.params.id, req.body, req.user) }); } catch (e) { next(e); } };
 const renew  = async (req, res, next) => { try { res.json({ success: true, data: await svc.renewContract(req.params.id, req.body, req.user.id) }); } catch (e) { next(e); } };
 const cancel = async (req, res, next) => {
@@ -33,4 +43,4 @@ const cancel = async (req, res, next) => {
   } catch (e) { next(e); }
 };
 
-module.exports = { list, stats, getOne, create, update, renew, cancel };
+module.exports = { list, stats, getOne, create, approve, reject, update, renew, cancel };

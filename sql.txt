@@ -469,14 +469,21 @@ CREATE TABLE IF NOT EXISTS `revenues` (
   `contract_id`    INT UNSIGNED  NOT NULL               COMMENT 'FK → contracts.id',
   `customer_id`    INT UNSIGNED  NOT NULL               COMMENT 'FK → customers.id (denorm để query nhanh)',
   `amount`         DECIMAL(15,2) NOT NULL               COMMENT 'Số tiền thanh toán (VNĐ)',
-  `payment_date`   DATE          NOT NULL               COMMENT 'Ngày khách thanh toán thực tế',
+  `status`         ENUM(
+                     'pending',
+                     'paid',
+                     'cancelled'
+                   )             NOT NULL DEFAULT 'pending' COMMENT 'pending=Chờ thu | paid=Đã thu | cancelled=Đã hủy',
+  `due_date`       DATE          NOT NULL               COMMENT 'Hạn chót thanh toán (Căn cứ theo gói tháng/năm)',
+  `payment_date`   DATE          NULL                   COMMENT 'Ngày khách thanh toán thực tế (NULL khi pending)',
   `payment_method` ENUM(
                      'bank_transfer',
                      'cash',
                      'online'
-                   )             NOT NULL DEFAULT 'bank_transfer' COMMENT 'Phương thức thanh toán',
+                   )             NULL                   COMMENT 'Phương thức thanh toán',
   `billing_period` VARCHAR(50)   NULL                   COMMENT 'Kỳ thanh toán: 2025 | 2025-01 | 2025-Q1',
   `notes`          TEXT          NULL                   COMMENT 'Ghi chú thanh toán',
+  `proof_url`      VARCHAR(1000) NULL                   COMMENT 'Link ảnh/chứng từ đính kèm (Bắt buộc khi paid)',
   `created_by`     INT UNSIGNED  NOT NULL               COMMENT 'FK → users.id (Sales ghi nhận – bắt buộc)',
   `created_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -523,9 +530,21 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Thông báo hệ thống (in-app )';
 
+--đoạn này mới thêm vào. do thay đổi về trạng thái hợp đồng cần phê duyệt của admin và manager
+-- 1. Cập nhật ENUM trạng thái (Thêm 'pending' và 'rejected')
+ALTER TABLE contracts 
+MODIFY COLUMN status ENUM('pending', 'active', 'rejected', 'near_expired', 'expired', 'cancelled') NOT NULL DEFAULT 'pending' COMMENT 'pending=chờ duyệt | active=đã duyệt | rejected=từ chối | ...';
+
+-- 2. Thêm cột lưu trữ URL file hợp đồng cứng (ảnh/pdf/docs)
+ALTER TABLE contracts
+ADD COLUMN attachment_url VARCHAR(1000) NULL COMMENT 'Link file bản cứng hợp đồng (Sales upload)';
+
+-- 3. Thêm cột lưu lý do từ chối
+ALTER TABLE contracts
+ADD COLUMN reject_reason TEXT NULL COMMENT 'Lý do Manager không duyệt hợp đồng';
+
 -- ================================================================
 SET FOREIGN_KEY_CHECKS = 1;
 -- ================================================================
 -- END OF SCHEMA
 -- ================================================================
-

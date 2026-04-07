@@ -28,11 +28,24 @@ export const contractsService = {
 
   /**
    * Tạo hợp đồng mới.
-   * Body: { contractNumber, customerId, solutionId, packageId,
-   *         billingCycle, startDate, endDate, value, discount, notes, assignedTo }
+   * Nhận vào FormData vì có upload file
    */
-  create: (data) =>
-    api.post(BASE, data).then(r => r.data.data),
+  create: (formData) =>
+    api.post(BASE, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data.data),
+
+  /**
+   * Duyệt hợp đồng (Manager/Admin)
+   */
+  approve: (id) =>
+    api.put(`${BASE}/${id}/approve`).then(r => r.data.data),
+
+  /**
+   * Từ chối hợp đồng (Manager/Admin)
+   */
+  reject: (id, reason) =>
+    api.put(`${BASE}/${id}/reject`, { reason }).then(r => r.data.data),
 
   /** Cập nhật notes / assignedTo */
   update: (id, data) =>

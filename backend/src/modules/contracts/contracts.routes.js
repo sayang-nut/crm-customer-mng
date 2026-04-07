@@ -16,6 +16,8 @@
  *   GET    /api/contracts/stats      All roles   – Thống kê nhanh
  *   POST   /api/contracts            Admin+Sales – Tạo mới
  *   GET    /api/contracts/:id        All roles   – Chi tiết + renewalHistory
+ *   PUT    /api/contracts/:id/approve Admin+Manager – Duyệt HĐ
+ *   PUT    /api/contracts/:id/reject  Admin+Manager – Từ chối HĐ
  *   PUT    /api/contracts/:id        Admin+Sales – Cập nhật notes/assigned
  *   POST   /api/contracts/:id/renew  Admin+Sales – Gia hạn
  *   POST   /api/contracts/:id/cancel Admin+Sales – Hủy
@@ -32,6 +34,7 @@ const ctrl = require('./contracts.controller');
 const { authenticate, authorize, allRoles } = require('@middleware/auth/auth');
 const { validate } = require('@middleware/auth/validate');
 const { ROLES, CONTRACT_STATUS, BILLING_CYCLE } = require('@config/constants');
+const { uploadCloud } = require('@config/cloudinary');
 
 const VALID_STATUS  = Object.values(CONTRACT_STATUS);
 const VALID_CYCLE   = Object.values(BILLING_CYCLE);
@@ -65,6 +68,7 @@ router.get('/',
 /** POST /api/contracts */
 router.post('/',
   authorize(...WRITE_ROLES),
+  uploadCloud.single('file'),
   [
     body('contractNumber').notEmpty().trim().withMessage('Số hợp đồng không được để trống.'),
     body('customerId').isInt({ min: 1 }).withMessage('customerId không hợp lệ.'),
@@ -89,6 +93,25 @@ router.get('/:id',
   param('id').isInt({ min: 1 }),
   validate,
   ctrl.getOne
+);
+
+/** PUT /api/contracts/:id/approve */
+router.put('/:id/approve',
+  authorize(ROLES.ADMIN, ROLES.MANAGER),
+  param('id').isInt({ min: 1 }),
+  validate,
+  ctrl.approve
+);
+
+/** PUT /api/contracts/:id/reject */
+router.put('/:id/reject',
+  authorize(ROLES.ADMIN, ROLES.MANAGER),
+  [
+    param('id').isInt({ min: 1 }),
+    body('reason').notEmpty().trim().withMessage('Vui lòng nhập lý do từ chối.'),
+  ],
+  validate,
+  ctrl.reject
 );
 
 /** PUT /api/contracts/:id */

@@ -31,8 +31,8 @@ const VALID_METHODS = Object.values(PAYMENT_METHOD);
 // ─── Helper ──────────────────────────────────────────────────────
 const _getById = async (id) => {
   const [[rev]] = await sequelize.query(
-    `SELECT r.id, r.contract_id, r.customer_id, r.amount,
-            r.payment_date, r.payment_method, r.billing_period,
+    `SELECT r.id, r.contract_id, r.customer_id, r.amount, r.status, r.due_date,
+            r.payment_date, r.payment_method, r.billing_period, r.proof_url,
             r.notes, r.created_by, r.created_at, r.updated_at,
             c.contract_number,
             cu.company_name,
@@ -73,8 +73,8 @@ const listRevenues = async (user, {
 
   if (contractId)    { conds.push('r.contract_id = ?');     params.push(Number(contractId)); }
   if (customerId)    { conds.push('r.customer_id = ?');     params.push(Number(customerId)); }
-  if (fromDate)      { conds.push('r.payment_date >= ?');   params.push(fromDate); }
-  if (toDate)        { conds.push('r.payment_date <= ?');   params.push(toDate); }
+  if (fromDate)      { conds.push('r.created_at >= ?');     params.push(fromDate); } // Lọc theo ngày tạo bản ghi thay vì ngày TT
+  if (toDate)        { conds.push('r.created_at <= ?');     params.push(toDate); }
   if (paymentMethod) { conds.push('r.payment_method = ?'); params.push(paymentMethod); }
 
   const where = conds.join(' AND ');
@@ -85,8 +85,8 @@ const listRevenues = async (user, {
   );
 
   const [rows] = await sequelize.query(
-    `SELECT r.id, r.contract_id, r.customer_id, r.amount,
-            r.payment_date, r.payment_method, r.billing_period,
+    `SELECT r.id, r.contract_id, r.customer_id, r.amount, r.status, r.due_date,
+            r.payment_date, r.payment_method, r.billing_period, r.proof_url,
             r.notes, r.created_at,
             c.contract_number,
             cu.company_name,
@@ -168,7 +168,7 @@ const createRevenue = async (data, userId) => {
 // updateRevenue  (tác giả hoặc Admin)
 const updateRevenue = async (id, data, user) => {
   const [[rev]] = await sequelize.query(
-    `SELECT id, created_by FROM revenues WHERE id = ? LIMIT 1`,
+    `SELECT id, created_by, status, proof_url FROM revenues WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!rev) throw new AppError('Bản ghi doanh thu không tồn tại.', 404);
@@ -177,17 +177,25 @@ const updateRevenue = async (id, data, user) => {
     throw new AppError('Bạn không có quyền chỉnh sửa bản ghi này.', 403);
   }
 
-  const { amount, paymentDate, paymentMethod, billingPeriod, notes } = data;
+  const { amount, status, paymentDate, paymentMethod, billingPeriod, notes, proofUrl } = data;
   const fields = [], values = [];
 
   if (amount        !== undefined) { fields.push('amount = ?');         values.push(Number(amount)); }
+  if (status        !== undefined) { fields.push('status = ?');         values.push(status); }
   if (paymentDate   !== undefined) { fields.push('payment_date = ?');   values.push(paymentDate); }
+  if (proofUrl      !== undefined) { fields.push('proof_url = ?');      values.push(proofUrl || null); }
   if (paymentMethod !== undefined) {
-    if (!VALID_METHODS.includes(paymentMethod)) throw new AppError('paymentMethod không hợp lệ.', 400);
-    fields.push('payment_method = ?'); values.push(paymentMethod);
+    if (paymentMethod && !VALID_METHODS.includes(paymentMethod)) throw new AppError('paymentMethod không hợp lệ.', 400);
+    fields.push('payment_method = ?'); values.push(paymentMethod || null);
   }
   if (billingPeriod !== undefined) { fields.push('billing_period = ?'); values.push(billingPeriod || null); }
   if (notes         !== undefined) { fields.push('notes = ?');          values.push(notes || null); }
+
+  // Validation bắt buộc có ảnh chứng từ khi Kế toán/Sales đổi sang Đã Thu (paid)
+  const isChangingToPaid = (status === 'paid' || rev.status === 'paid');
+  if (isChangingToPaid && !proofUrl && !rev.proof_url) {
+     throw new AppError('Bắt buộc phải đính kèm chứng từ thanh toán để xác nhận đã thu tiền.', 400);
+  }
 
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
 
@@ -217,7 +225,7 @@ const deleteRevenue = async (id) => {
 // getSummary – Doanh thu tổng hợp theo kỳ & giải pháp
 // ─────────────────────────────────────────────────────────────────
 const getSummary = async ({ groupBy = 'month', fromDate, toDate, solutionId } = {}) => {
-  const conds = ['1=1'], params = [];
+  const conds = ["r.status = 'paid'"], params = []; // Chỉ tính tiền Đã thu
 
   if (fromDate)   { conds.push('r.payment_date >= ?'); params.push(fromDate); }
   if (toDate)     { conds.push('r.payment_date <= ?'); params.push(toDate); }
@@ -269,7 +277,7 @@ const getSummary = async ({ groupBy = 'month', fromDate, toDate, solutionId } = 
 // getStats  – Thống kê nhanh cho dashboard
 // ─────────────────────────────────────────────────────────────────
 const getStats = async (user) => {
-  const conds = ['1=1'], params = [];
+  const conds = ["r.status = 'paid'"], params = []; // Chỉ tính tiền Đã thu
   if (user.role === ROLES.SALES) { conds.push('r.created_by = ?'); params.push(user.id); }
   const where = conds.join(' AND ');
 

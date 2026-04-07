@@ -16,6 +16,8 @@
  *   createContract   – Tạo HĐ, auto-update customer → active
  *   updateContract   – Cập nhật ghi chú / assigned_to
  *   renewContract    – Gia hạn: lưu history, reset warn flags
+ *   approveContract  – Quản lý duyệt HĐ → active, kích hoạt KH
+ *   rejectContract   – Quản lý từ chối HĐ → rejected
  *   cancelContract   – Hủy HĐ, ghi lý do vào notes
  *   getStats         – Thống kê nhanh: tổng HĐ, sắp hết hạn, doanh thu
  *
@@ -39,6 +41,7 @@ const _getById = async (id) => {
             c.value, c.discount, c.final_value, c.status,
             c.notes, c.assigned_to, c.created_by,
             c.warn_30_sent, c.warn_7_sent, c.expired_remind_sent,
+            c.attachment_url, c.reject_reason,
             c.created_at, c.updated_at,
             cu.company_name, cu.tax_code,
             s.name  AS solution_name,
@@ -169,8 +172,8 @@ const getContractById = async (id, user) => {
 // ─────────────────────────────────────────────────────────────────
 const createContract = async (data, userId) => {
   const {
-    contractNumber, customerId, solutionId, packageId,
-    billingCycle, startDate, endDate, value, discount, notes, assignedTo,
+    contractNumber, customerId, solutionId, packageId, billingCycle, 
+    startDate, endDate, value, discount, notes, assignedTo, attachmentUrl
   } = data;
 
   // Số HĐ unique
@@ -200,40 +203,75 @@ const createContract = async (data, userId) => {
     `INSERT INTO contracts
        (contract_number, customer_id, solution_id, package_id, billing_cycle,
         start_date, end_date, value, discount, final_value,
-        status, assigned_to, notes, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+        status, assigned_to, notes, created_by, attachment_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
     {
       replacements: [
         contractNumber.trim(), Number(customerId), Number(solutionId),
         Number(packageId), billingCycle || 'yearly',
         startDate, endDate,
         Number(value), disc, finalValue,
-        Number(assignee), notes || null, userId,
+        Number(assignee), notes || null, userId, attachmentUrl || null
       ],
     }
   );
 
-  // Auto-switch customer → active nếu đang là lead/expired
-  const [[customer]] = await sequelize.query(
-    `SELECT status FROM customers WHERE id = ? LIMIT 1`,
-    { replacements: [Number(customerId)] }
-  );
-  if (customer && customer.status !== 'active') {
-    await sequelize.query(
-      `UPDATE customers SET status = 'active', updated_at = NOW() WHERE id = ?`,
-      { replacements: [Number(customerId)] }
-    );
-    await sequelize.query(
-      `INSERT INTO customer_status_history
-         (customer_id, from_status, to_status, reason, changed_by)
-       VALUES (?, ?, 'active', 'Ký hợp đồng mới', ?)`,
-      { replacements: [Number(customerId), customer.status, userId] }
-    );
-    logger.info(`[CONTRACTS] Customer ${customerId} auto-activated via new contract`);
-  }
-
   logger.info(`[CONTRACTS] Created contract id=${result} no=${contractNumber}`);
   return _getById(result);
+};
+// approveContract
+const approveContract = async (id, userId) => {
+  const contract = await _getById(id);
+  if (contract.status !== 'pending') throw new AppError('Chỉ có thể duyệt hợp đồng đang chờ.', 400);
+
+  await sequelize.query(
+    `UPDATE contracts SET status = 'active', updated_at = NOW() WHERE id = ?`,
+    { replacements: [Number(id)] }
+  );
+
+  // Kích hoạt KH sau khi hợp đồng được duyệt
+  const [[customer]] = await sequelize.query(
+    `SELECT status FROM customers WHERE id = ? LIMIT 1`,
+    { replacements: [contract.customer_id] }
+  );
+  if (customer && customer.status !== 'active') {
+    await sequelize.query(`UPDATE customers SET status = 'active', updated_at = NOW() WHERE id = ?`, { replacements: [contract.customer_id] });
+    await sequelize.query(
+      `INSERT INTO customer_status_history (customer_id, from_status, to_status, reason, changed_by) VALUES (?, ?, 'active', 'Hợp đồng được duyệt', ?)`,
+      { replacements: [contract.customer_id, customer.status, userId] }
+    );
+  }
+
+  // Tự động sinh bản ghi doanh thu CHỜ THU (pending)
+  let dueDateQuery = "DATE_ADD(CURDATE(), INTERVAL 1 MONTH)"; // Mặc định gói năm
+  if (contract.billing_cycle === 'monthly') {
+    dueDateQuery = "DATE_ADD(CURDATE(), INTERVAL 7 DAY)";     // Gói tháng
+  }
+
+  await sequelize.query(
+    `INSERT INTO revenues (contract_id, customer_id, amount, status, due_date, billing_period, created_by)
+     VALUES (?, ?, ?, 'pending', ${dueDateQuery}, DATE_FORMAT(CURDATE(), '%Y-%m'), ?)`,
+    { replacements: [contract.id, contract.customer_id, contract.final_value, userId] }
+  );
+
+  logger.info(`[CONTRACTS] Contract ${id} approved by ${userId}`);
+  return _getById(id);
+};
+
+// ─────────────────────────────────────────────────────────────────
+// rejectContract
+// ─────────────────────────────────────────────────────────────────
+const rejectContract = async (id, reason, userId) => {
+  const contract = await _getById(id);
+  if (contract.status !== 'pending') throw new AppError('Chỉ có thể từ chối hợp đồng đang chờ.', 400);
+  if (!reason || !reason.trim()) throw new AppError('Vui lòng nhập lý do từ chối.', 400);
+
+  await sequelize.query(
+    `UPDATE contracts SET status = 'rejected', reject_reason = ?, updated_at = NOW() WHERE id = ?`,
+    { replacements: [reason.trim(), Number(id)] }
+  );
+  logger.info(`[CONTRACTS] Contract ${id} rejected by ${userId}`);
+  return _getById(id);
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -327,6 +365,18 @@ const renewContract = async (contractId, data, userId) => {
     { replacements: [contract.customer_id] }
   );
 
+  // Tự động sinh doanh thu CHỜ THU cho chu kỳ mới (Gia hạn)
+  let dueDateQuery = "DATE_ADD(CURDATE(), INTERVAL 1 MONTH)";
+  if (contract.billing_cycle === 'monthly') {
+    dueDateQuery = "DATE_ADD(CURDATE(), INTERVAL 7 DAY)";
+  }
+
+  await sequelize.query(
+    `INSERT INTO revenues (contract_id, customer_id, amount, status, due_date, billing_period, created_by)
+     VALUES (?, ?, ?, 'pending', ${dueDateQuery}, DATE_FORMAT(CURDATE(), '%Y-%m'), ?)`,
+    { replacements: [contract.id, contract.customer_id, finalValue, userId] }
+  );
+
   logger.info(`[CONTRACTS] Renewed contract ${contractId} → ${newEndDate}`);
   return _getById(contractId);
 };
@@ -398,6 +448,8 @@ module.exports = {
   listContracts,
   getContractById,
   createContract,
+  approveContract,
+  rejectContract,
   updateContract,
   renewContract,
   cancelContract,
