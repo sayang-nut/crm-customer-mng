@@ -9,7 +9,7 @@
  * @requires ../../config/constants           → ROLES, PAYMENT_METHOD
  * @requires ../../middleware/error.middleware → AppError
  * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ – LAYER: SERVICE (Business Logic)
+ * VAI TRÒ – LAYER: SERVICE (Business Logic)  
  *
  *   listRevenues    – Danh sách bản ghi thanh toán (role-aware)
  *   getById         – Chi tiết 1 bản ghi
@@ -34,7 +34,7 @@ const _getById = async (id) => {
     `SELECT r.id, r.contract_id, r.customer_id, r.amount, r.status, r.due_date,
             r.payment_date, r.payment_method, r.billing_period, r.proof_url,
             r.notes, r.created_by, r.created_at, r.updated_at,
-            c.contract_number,
+            c.contract_number, c.assigned_to,
             cu.company_name,
             s.name  AS solution_name,
             sp.name AS package_name,
@@ -52,9 +52,7 @@ const _getById = async (id) => {
   return rev;
 };
 
-// ─────────────────────────────────────────────────────────────────
 // listRevenues
-// ─────────────────────────────────────────────────────────────────
 const listRevenues = async (user, {
   page = 1, limit = 20,
   contractId, customerId, fromDate, toDate, paymentMethod,
@@ -65,9 +63,9 @@ const listRevenues = async (user, {
 
   const conds = ['1=1'], params = [];
 
-  // Sales chỉ xem bản ghi mình tạo
+  // Sales chỉ xem bản ghi thuộc hợp đồng mình phụ trách
   if (user.role === ROLES.SALES) {
-    conds.push('r.created_by = ?');
+    conds.push('c.assigned_to = ?');
     params.push(user.id);
   }
 
@@ -80,7 +78,10 @@ const listRevenues = async (user, {
   const where = conds.join(' AND ');
 
   const [[{ total }]] = await sequelize.query(
-    `SELECT COUNT(*) AS total FROM revenues r WHERE ${where}`,
+    `SELECT COUNT(*) AS total 
+     FROM revenues r 
+     JOIN contracts c ON c.id = r.contract_id 
+     WHERE ${where}`,
     { replacements: params }
   );
 
@@ -111,22 +112,17 @@ const listRevenues = async (user, {
     totalPages: Math.ceil(Number(total) / limitNum),
   };
 };
-
-// ─────────────────────────────────────────────────────────────────
 // getById
-// ─────────────────────────────────────────────────────────────────
 const getById = async (id, user) => {
   const rev = await _getById(id);
-  // Sales chỉ xem bản ghi mình tạo
-  if (user.role === ROLES.SALES && rev.created_by !== user.id) {
+  // Sales chỉ xem bản ghi thuộc hợp đồng mình phụ trách
+  if (user.role === ROLES.SALES && rev.assigned_to !== user.id) {
     throw new AppError('Bạn không có quyền xem bản ghi này.', 403);
   }
   return rev;
 };
 
-// ─────────────────────────────────────────────────────────────────
 // createRevenue
-// ─────────────────────────────────────────────────────────────────
 const createRevenue = async (data, userId) => {
   const { contractId, customerId, amount, paymentDate, paymentMethod, billingPeriod, notes } = data;
 
@@ -168,12 +164,15 @@ const createRevenue = async (data, userId) => {
 // updateRevenue  (tác giả hoặc Admin)
 const updateRevenue = async (id, data, user) => {
   const [[rev]] = await sequelize.query(
-    `SELECT id, created_by, status, proof_url FROM revenues WHERE id = ? LIMIT 1`,
+    `SELECT r.id, r.created_by, r.status, r.proof_url, c.assigned_to 
+     FROM revenues r
+     JOIN contracts c ON c.id = r.contract_id
+     WHERE r.id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!rev) throw new AppError('Bản ghi doanh thu không tồn tại.', 404);
 
-  if (user.role !== ROLES.ADMIN && rev.created_by !== user.id) {
+  if (user.role === ROLES.SALES && rev.assigned_to !== user.id) {
     throw new AppError('Bạn không có quyền chỉnh sửa bản ghi này.', 403);
   }
 
@@ -207,9 +206,7 @@ const updateRevenue = async (id, data, user) => {
   return _getById(id);
 };
 
-// ─────────────────────────────────────────────────────────────────
 // deleteRevenue  (Admin only)
-// ─────────────────────────────────────────────────────────────────
 const deleteRevenue = async (id) => {
   const [[rev]] = await sequelize.query(
     `SELECT id FROM revenues WHERE id = ? LIMIT 1`,
@@ -221,9 +218,7 @@ const deleteRevenue = async (id) => {
   logger.info(`[REVENUES] Deleted id=${id}`);
 };
 
-// ─────────────────────────────────────────────────────────────────
 // getSummary – Doanh thu tổng hợp theo kỳ & giải pháp
-// ─────────────────────────────────────────────────────────────────
 const getSummary = async ({ groupBy = 'month', fromDate, toDate, solutionId } = {}) => {
   const conds = ["r.status = 'paid'"], params = []; // Chỉ tính tiền Đã thu
 
@@ -273,12 +268,10 @@ const getSummary = async ({ groupBy = 'month', fromDate, toDate, solutionId } = 
   };
 };
 
-// ─────────────────────────────────────────────────────────────────
 // getStats  – Thống kê nhanh cho dashboard
-// ─────────────────────────────────────────────────────────────────
 const getStats = async (user) => {
   const conds = ["r.status = 'paid'"], params = []; // Chỉ tính tiền Đã thu
-  if (user.role === ROLES.SALES) { conds.push('r.created_by = ?'); params.push(user.id); }
+  if (user.role === ROLES.SALES) { conds.push('c.assigned_to = ?'); params.push(user.id); }
   const where = conds.join(' AND ');
 
   const [[s]] = await sequelize.query(

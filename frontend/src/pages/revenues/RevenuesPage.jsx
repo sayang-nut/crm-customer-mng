@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/authContext';
 import revenuesService from '../../services/revenuesService';
-import { Edit, Trash2, Plus, Search, Filter, Download, Calendar, DollarSign } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, Filter, Download, Calendar, DollarSign, Paperclip, ExternalLink } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Badge from '../../components/common/Badge';
@@ -20,6 +20,12 @@ const fmtVND = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', curren
 const fmtCpct = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', notation: 'compact', maximumFractionDigits: 1 }).format(n || 0);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN') : '—';
 const PM_LABELS = { bank_transfer: 'Chuyển khoản', cash: 'Tiền mặt', online: 'Online' };
+
+const STATUS_UI = {
+  pending: { label: 'Chờ thu', variant: 'warning' },
+  paid: { label: 'Đã thu', variant: 'success' },
+  cancelled: { label: 'Đã hủy', variant: 'danger' }
+};
 
 const StatCard = ({ label, value, sub, color = '#60A5FA', growth }) => (
   <Card className="border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
@@ -52,6 +58,8 @@ const RevenuesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [modalStatus, setModalStatus] = useState('pending'); // Trạng thái chọn trong modal
+  const [proofFile, setProofFile] = useState(null); // File upload
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -84,16 +92,41 @@ const RevenuesPage = () => {
     e.preventDefault();
     setModalLoading(true);
     setModalError('');
+    
+    let uploadedUrl = modalData?.proof_url;
+    
+    // Xử lý upload file nếu trạng thái là "Đã thu" và có chọn file mới
+    if (modalStatus === 'paid' && proofFile) {
+      try {
+        const formData = new FormData();
+        formData.append('file', proofFile);
+        // Thay hàm này bằng hàm gọi API upload file thực tế của bạn
+        // const uploadRes = await uploadService.upload(formData); 
+        // uploadedUrl = uploadRes.url;
+      } catch (err) {
+        setModalError('Lỗi khi tải lên chứng từ. Vui lòng thử lại.');
+        setModalLoading(false);
+        return;
+      }
+    }
+
     const fd = new FormData(e.target);
     const payload = {
-      contractId: Number(fd.get('contractId')),
-      customerId: Number(fd.get('customerId')),
       amount: Number(fd.get('amount')),
+      status: fd.get('status'),
       paymentDate: fd.get('paymentDate'),
       paymentMethod: fd.get('paymentMethod'),
       billingPeriod: fd.get('billingPeriod') || undefined,
-      notes: fd.get('notes') || undefined
+      notes: fd.get('notes') || undefined,
+      proofUrl: uploadedUrl
     };
+
+    // Disable sửa contractId/customerId đối với bản ghi tự sinh
+    if (!modalData?.id) {
+      payload.contractId = Number(fd.get('contractId'));
+      payload.customerId = Number(fd.get('customerId'));
+    }
+
     try {
       if (modalData?.id) {
         await revenuesService.update(modalData.id, payload);
@@ -135,9 +168,26 @@ const RevenuesPage = () => {
       render: (row) => <span className="text-lg font-black text-green-700">{fmtVND(row.amount)}</span> 
     },
     { 
+      key: 'status', 
+      label: 'Trạng thái', 
+      render: (row) => (
+        <Badge variant={STATUS_UI[row.status]?.variant || 'secondary'} className="!rounded-md">
+          {STATUS_UI[row.status]?.label || row.status}
+        </Badge>
+      ) 
+    },
+    { 
       key: 'payment_date', 
-      label: 'Ngày TT', 
-      render: (row) => <span className="text-sm text-gray-600">{fmtDate(row.payment_date)}</span> 
+      label: 'Hạn / Ngày TT', 
+      render: (row) => (
+        <div className="flex flex-col">
+          {row.status === 'pending' ? (
+            <span className="text-sm text-orange-600 font-semibold">Hạn: {fmtDate(row.due_date)}</span>
+          ) : (
+            <span className="text-sm text-gray-600">{fmtDate(row.payment_date)}</span>
+          )}
+        </div>
+      )
     },
     { 
       key: 'payment_method', 
@@ -148,6 +198,20 @@ const RevenuesPage = () => {
       key: 'billing_period', 
       label: 'Kỳ', 
       render: (row) => <span className="text-sm text-gray-600">{row.billing_period || '—'}</span> 
+    },
+    {
+      key: 'proof',
+      label: 'Chứng từ',
+      render: (row) => row.proof_url ? (
+        <a 
+          href={row.proof_url} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs font-medium bg-blue-50 px-2 py-1 rounded"
+        >
+          <ExternalLink className="w-3 h-3" /> Xem
+        </a>
+      ) : <span className="text-gray-400 text-xs">—</span>
     },
     {
       key: 'actions',
@@ -163,10 +227,12 @@ const RevenuesPage = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 setModalData(row);
+                setModalStatus(row.status || 'pending');
+                setProofFile(null);
                 setShowModal(true);
               }}
             >
-              Sửa
+              {row.status === 'pending' ? 'Thu tiền' : 'Sửa'}
             </Button>
           )}
           {isAdmin && (
@@ -327,9 +393,10 @@ const RevenuesPage = () => {
         onClose={() => {
           setShowModal(false);
           setModalData(null);
+          setProofFile(null);
           setModalError('');
         }}
-        title={modalData?.id ? 'Sửa bản ghi doanh thu' : 'Ghi nhận thanh toán'}
+        title={modalData?.id ? `Cập nhật khoản thu #${modalData.id}` : 'Tạo khoản thu thủ công'}
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -353,6 +420,7 @@ const RevenuesPage = () => {
         )}
         <form id="revenue-form" onSubmit={handleModalSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Chỉ cho nhập tay nếu tạo mới thủ công */}
             <Input
               label="Contract ID *"
               name="contractId"
@@ -360,6 +428,7 @@ const RevenuesPage = () => {
               min="1"
               required
               defaultValue={modalData?.contract_id}
+              disabled={!!modalData?.id}
             />
             <Input
               label="Customer ID *"
@@ -368,6 +437,7 @@ const RevenuesPage = () => {
               min="1"
               required
               defaultValue={modalData?.customer_id}
+              disabled={!!modalData?.id}
             />
             <Input
               label="Số tiền (VNĐ) *"
@@ -379,11 +449,23 @@ const RevenuesPage = () => {
               defaultValue={modalData?.amount}
             />
             <Input
+              label="Trạng thái khoản thu *"
+              as="select"
+              name="status"
+              required
+              value={modalStatus}
+              onChange={(e) => setModalStatus(e.target.value)}
+            >
+              <option value="pending">🟠 Chờ khách thanh toán</option>
+              <option value="paid">🟢 Đã thu tiền thành công</option>
+              <option value="cancelled">⚫ Hủy bỏ khoản thu này</option>
+            </Input>
+            <Input
               label="Ngày thanh toán *"
               name="paymentDate"
               type="date"
-              required
               defaultValue={modalData?.payment_date?.slice(0, 10)}
+              disabled={modalStatus !== 'paid'}
             />
           </div>
           <Input
@@ -392,11 +474,33 @@ const RevenuesPage = () => {
             name="paymentMethod"
             required
             defaultValue={modalData?.payment_method || 'bank_transfer'}
+            disabled={modalStatus !== 'paid'}
           >
             <option value="bank_transfer">Chuyển khoản</option>
             <option value="cash">Tiền mặt</option>
             <option value="online">Online</option>
           </Input>
+
+          {/* Yêu cầu đính kèm chứng từ nếu xác nhận Đã thu */}
+          {modalStatus === 'paid' && (
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <label className="block text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <Paperclip className="w-4 h-4" /> Đính kèm chứng từ (Bắt buộc)
+              </label>
+              {modalData?.proof_url && !proofFile && (
+                <div className="mb-2 text-sm text-green-700 font-medium">✓ Đã có chứng từ hiện tại. Tải file mới nếu muốn ghi đè.</div>
+              )}
+              <input 
+                type="file" 
+                accept="image/*,application/pdf"
+                onChange={(e) => setProofFile(e.target.files[0])}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                required={!modalData?.proof_url} // Bắt buộc nếu chưa có ảnh
+              />
+              <p className="text-xs text-gray-500 mt-2">Hỗ trợ định dạng Ảnh (JPG, PNG) hoặc PDF.</p>
+            </div>
+          )}
+
           <Input
             label="Kỳ thanh toán (VD: 2025-01)"
             name="billingPeriod"
