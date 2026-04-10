@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../store/authContext';
 import revenuesService from '../../services/revenuesService';
+import uploadService from '../../services/uploadService';
 import { Edit, Trash2, Plus, Search, Filter, Download, Calendar, DollarSign, Paperclip, ExternalLink } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -100,9 +101,8 @@ const RevenuesPage = () => {
       try {
         const formData = new FormData();
         formData.append('file', proofFile);
-        // Thay hàm này bằng hàm gọi API upload file thực tế của bạn
-        // const uploadRes = await uploadService.upload(formData); 
-        // uploadedUrl = uploadRes.url;
+        const uploadRes = await uploadService.uploadSingle(formData); 
+        uploadedUrl = uploadRes.data.data.url;
       } catch (err) {
         setModalError('Lỗi khi tải lên chứng từ. Vui lòng thử lại.');
         setModalLoading(false);
@@ -427,7 +427,7 @@ const RevenuesPage = () => {
               type="number"
               min="1"
               required
-              defaultValue={modalData?.contract_id}
+              defaultValue={modalData?.contract_id || ''}
               disabled={!!modalData?.id}
             />
             <Input
@@ -436,7 +436,7 @@ const RevenuesPage = () => {
               type="number"
               min="1"
               required
-              defaultValue={modalData?.customer_id}
+              defaultValue={modalData?.customer_id || ''}
               disabled={!!modalData?.id}
             />
             <Input
@@ -444,42 +444,46 @@ const RevenuesPage = () => {
               name="amount"
               type="number"
               min="0.01"
-              step="1000"
+              step="0.01"
               required
-              defaultValue={modalData?.amount}
+              defaultValue={modalData?.amount || ''}
             />
-            <Input
-              label="Trạng thái khoản thu *"
-              as="select"
-              name="status"
-              required
-              value={modalStatus}
-              onChange={(e) => setModalStatus(e.target.value)}
-            >
-              <option value="pending">🟠 Chờ khách thanh toán</option>
-              <option value="paid">🟢 Đã thu tiền thành công</option>
-              <option value="cancelled">⚫ Hủy bỏ khoản thu này</option>
-            </Input>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái khoản thu *</label>
+              <select
+                name="status"
+                required
+                value={modalStatus}
+                onChange={(e) => setModalStatus(e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="pending">🟠 Chờ khách thanh toán</option>
+                <option value="paid">🟢 Đã thu tiền thành công</option>
+                <option value="cancelled">⚫ Hủy bỏ khoản thu này</option>
+              </select>
+            </div>
             <Input
               label="Ngày thanh toán *"
               name="paymentDate"
               type="date"
-              defaultValue={modalData?.payment_date?.slice(0, 10)}
+              defaultValue={modalData?.payment_date ? String(modalData.payment_date).substring(0, 10) : ''}
               disabled={modalStatus !== 'paid'}
             />
           </div>
-          <Input
-            label="Phương thức *"
-            as="select"
-            name="paymentMethod"
-            required
-            defaultValue={modalData?.payment_method || 'bank_transfer'}
-            disabled={modalStatus !== 'paid'}
-          >
-            <option value="bank_transfer">Chuyển khoản</option>
-            <option value="cash">Tiền mặt</option>
-            <option value="online">Online</option>
-          </Input>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Phương thức *</label>
+            <select
+              name="paymentMethod"
+              required
+              defaultValue={modalData?.payment_method || 'bank_transfer'}
+              disabled={modalStatus !== 'paid'}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
+            >
+              <option value="bank_transfer">Chuyển khoản</option>
+              <option value="cash">Tiền mặt</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
 
           {/* Yêu cầu đính kèm chứng từ nếu xác nhận Đã thu */}
           {modalStatus === 'paid' && (
@@ -504,15 +508,17 @@ const RevenuesPage = () => {
           <Input
             label="Kỳ thanh toán (VD: 2025-01)"
             name="billingPeriod"
-            defaultValue={modalData?.billing_period}
+            defaultValue={modalData?.billing_period || ''}
           />
-          <Input
-            label="Ghi chú"
-            name="notes"
-            as="textarea"
-            rows={3}
-            defaultValue={modalData?.notes}
-          />
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Ghi chú</label>
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={modalData?.notes || ''}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
         </form>
       </Modal>
     </div>

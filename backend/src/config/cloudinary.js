@@ -12,9 +12,9 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'crm_contracts', // Tên thư mục lưu trữ
+    folder: 'crm_proofs', // Thư mục lưu trữ trên Cloudinary
     allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-    resource_type: 'raw' // upload pdf/docs không bị lỗi
+    resource_type: 'auto' // 'auto' giúp file PDF có thể mở xem trực tiếp trên tab mới
   },
 });
 

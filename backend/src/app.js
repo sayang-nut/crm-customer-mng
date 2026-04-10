@@ -25,6 +25,7 @@ const revenuesRoutes      = require('./modules/revenues/revenues.routes');
 const dashboardRoutes     = require('./modules/dashboard/dashboard.routes');
 
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
+const uploadRoutes        = require('./modules/upload/upload.routes');
 
 console.log('✅ Dashboard routes loaded:', dashboardRoutes);
 
@@ -83,6 +84,7 @@ app.use('/api/tickets',       apiLimiter,  ticketsRoutes);
 app.use('/api/revenues',      apiLimiter,  revenuesRoutes);
 app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
 app.use('/api/notifications', apiLimiter,  notificationsRoutes);
+app.use('/api/upload',        apiLimiter,  uploadRoutes);
 
 // ── Health check ──────────────────────────────────────────────────
 app.get('/health', (req, res) => {

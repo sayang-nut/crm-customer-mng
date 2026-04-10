@@ -67,9 +67,11 @@ router.post('/', authorize(...WRITE_ROLES),
     body('contractId').isInt({ min:1 }).withMessage('contractId không hợp lệ.'),
     body('customerId').isInt({ min:1 }).withMessage('customerId không hợp lệ.'),
     body('amount').isFloat({ min:0.01 }).withMessage('amount phải > 0.'),
-    body('paymentDate').isDate().withMessage('paymentDate không hợp lệ (YYYY-MM-DD).'),
-    body('paymentMethod').optional().isIn(VALID_METHODS),
+    body('paymentDate').optional({ nullable: true, checkFalsy: true }).isDate().withMessage('paymentDate không hợp lệ (YYYY-MM-DD).'),
+    body('paymentMethod').optional({ nullable: true, checkFalsy: true }).isIn(VALID_METHODS),
     body('billingPeriod').optional().isString().trim(),
+    body('status').optional().isIn(['pending', 'paid', 'cancelled']),
+    body('proofUrl').optional({ nullable: true, checkFalsy: true }).isString(),
   ],
   validate, ctrl.create
 );
@@ -80,8 +82,10 @@ router.put('/:id',    authorize(...WRITE_ROLES),
   [
     param('id').isInt({ min:1 }),
     body('amount').optional().isFloat({ min:0.01 }),
-    body('paymentDate').optional().isDate(),
-    body('paymentMethod').optional().isIn(VALID_METHODS),
+    body('paymentDate').optional({ nullable: true, checkFalsy: true }).isDate(),
+    body('paymentMethod').optional({ nullable: true, checkFalsy: true }).isIn(VALID_METHODS),
+    body('status').optional().isIn(['pending', 'paid', 'cancelled']),
+    body('proofUrl').optional({ nullable: true, checkFalsy: true }).isString(),
   ],
   validate, ctrl.update
 );

@@ -181,7 +181,7 @@ const updateRevenue = async (id, data, user) => {
 
   if (amount        !== undefined) { fields.push('amount = ?');         values.push(Number(amount)); }
   if (status        !== undefined) { fields.push('status = ?');         values.push(status); }
-  if (paymentDate   !== undefined) { fields.push('payment_date = ?');   values.push(paymentDate); }
+  if (paymentDate   !== undefined) { fields.push('payment_date = ?');   values.push(paymentDate || null); }
   if (proofUrl      !== undefined) { fields.push('proof_url = ?');      values.push(proofUrl || null); }
   if (paymentMethod !== undefined) {
     if (paymentMethod && !VALID_METHODS.includes(paymentMethod)) throw new AppError('paymentMethod không hợp lệ.', 400);
