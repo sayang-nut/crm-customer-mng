@@ -4,20 +4,17 @@
  * @theme     WHITE PLAIN - Sync Header/Sidebar/MainLayout
  * ─────────────────────────────────────────────────────────────────
  * VAI TRÒ: Trang Dashboard – KPI theo role (Admin/Sales/CSKH)
- * ✅ LOGIC 100% GIỮ NGUYÊN | UI WHITE PLAIN | RESPONSIVE
  */
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../store/authContext';
 import dashboardService from '../../services/dashboardService';
 
-// ✅ COMMON COMPONENTS
+// COMMON COMPONENTS
 import StatsCard from '../../components/dashboard/StatsCard';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
-
-// ✅ ICONS
 import { Users, FileText, Ticket, DollarSign, AlertTriangle } from 'lucide-react';
 
 const fmtVND = (n) => new Intl.NumberFormat('vi-VN', {
@@ -29,7 +26,6 @@ const DashboardPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ LOGIC GIỮ NGUYÊN 100%
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
@@ -105,7 +101,7 @@ const AdminDashboard = ({ data }) => (
       <StatsCard 
         title="Khách hàng" 
         value={data.customerStats?.total || 0}
-        change={"+12.5%"}
+  
         changeType="up"
         icon={Users}
         color="primary"
@@ -118,7 +114,6 @@ const AdminDashboard = ({ data }) => (
       <StatsCard 
         title="Hợp đồng" 
         value={data.contractStats?.total || 0}
-        change={"+8.2%"}
         changeType="up"
         icon={FileText}
         color="success"
@@ -131,7 +126,7 @@ const AdminDashboard = ({ data }) => (
       <StatsCard 
         title="Tickets" 
         value={data.ticketStats?.total || 0}
-        change={"+3.1%"}
+
         changeType="down"
         icon={Ticket}
         color="warning"
@@ -143,8 +138,8 @@ const AdminDashboard = ({ data }) => (
 
       <StatsCard 
         title="Doanh thu tháng" 
-        value={fmtVND(data.revenue?.currentMonth)}
-        change={"+25.7%"}
+        value={fmtVND(data.revenue?.thisMonth || data.revenue?.currentMonth || 0)}
+     
         changeType="up"
         icon={DollarSign}
         color="accent"
@@ -214,7 +209,7 @@ const SalesDashboard = ({ data }) => (
 
       <StatsCard 
         title="Doanh thu tháng" 
-        value={fmtVND(data.myRevenue?.month_total)}
+        value={fmtVND(data.myRevenue?.thisMonth || data.myRevenue?.month_total || 0)}
         change={"+28.9%"}
         changeType="up"
         icon={DollarSign}
@@ -255,7 +250,7 @@ const CSKHDashboard = ({ data }) => (
       <StatsCard 
         title="Ticket của tôi" 
         value={data.myTickets?.total || 0}
-        change={"+5.2%"}
+       
         changeType="up"
         icon={Ticket}
         color="primary"
@@ -273,7 +268,7 @@ const CSKHDashboard = ({ data }) => (
       <StatsCard 
         title="Đã giải quyết" 
         value={data.myTickets?.resolved || 0}
-        change={"+12.1%"}
+        
         changeType="up"
         icon={Ticket}
         color="success"

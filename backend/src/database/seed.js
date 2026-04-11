@@ -17,7 +17,6 @@
  *   - 5 tài khoản nhân viên (admin, manager, sales, cskh, technical)
  *   - 12 ngành nghề (industries)
  *   - 3 nhóm giải pháp + 5 giải pháp + 9 gói dịch vụ
- *   - 6 loại ticket
  *
  * MẬT KHẨU MẶC ĐỊNH: Bado@123 (đổi sau khi setup xong)
  * ─────────────────────────────────────────────────────────────────
@@ -132,23 +131,6 @@ async function seed() {
          (solution_id, name, level, price_monthly, price_yearly, status)
        VALUES (?, ?, ?, ?, ?, 'active')`,
       [p.sid, p.name, p.level, p.pm, p.py]
-    );
-  }
-
-  // ── 6. Loại ticket ────────────────────────────────────────────
-  logger.info('🎫 Seeding: ticket_types...');
-  const ticketTypes = [
-    { name: 'Kỹ thuật',              code: 'technical'  },
-    { name: 'Thanh toán',            code: 'payment'    },
-    { name: 'Hướng dẫn sử dụng',    code: 'guidance'   },
-    { name: 'Yêu cầu nâng cấp',     code: 'upgrade'    },
-    { name: 'Khiếu nại',             code: 'complaint'  },
-    { name: 'Chăm sóc khách hàng',   code: 'care'       },
-  ];
-  for (const t of ticketTypes) {
-    await run(
-      `INSERT IGNORE INTO ticket_types (name, code) VALUES (?, ?)`,
-      [t.name, t.code]
     );
   }
 

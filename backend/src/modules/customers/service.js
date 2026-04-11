@@ -63,10 +63,8 @@ const _getById = async (id) => {
 
   // 2. Lấy danh sách tickets
   const [tickets] = await sequelize.query(
-    `SELECT t.id, t.title, t.priority, t.status, t.created_at AS createdAt,
-            tt.name AS ticket_type
+    `SELECT t.id, t.title, t.priority, t.status, t.created_at AS createdAt
      FROM tickets t
-     LEFT JOIN ticket_types tt ON tt.id = t.ticket_type_id
      WHERE t.customer_id = ? ORDER BY t.created_at DESC`,
     { replacements: [Number(id)] }
   );

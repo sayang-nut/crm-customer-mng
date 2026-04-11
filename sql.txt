@@ -271,14 +271,11 @@ CREATE TABLE IF NOT EXISTS `contracts` (
   `value`               DECIMAL(15,2) NOT NULL               COMMENT 'Giá trị trước chiết khấu (VNĐ)',
   `discount`            DECIMAL(5,2)  NOT NULL DEFAULT 0     COMMENT 'Chiết khấu (%)',
   `final_value`         DECIMAL(15,2) NOT NULL               COMMENT 'Giá trị thực tế = value*(1-discount/100)',
-  `status`              ENUM(
-                          'active',
-                          'near_expired',
-                          'expired',
-                          'cancelled'
-                        )             NOT NULL DEFAULT 'active' COMMENT 'active | near_expired (≤7 ngày) | expired | cancelled',
+  `status`              ENUM('pending','active','rejected','near_expired','expired','cancelled') NOT NULL DEFAULT 'pending' COMMENT 'pending=chờ duyệt | active=đã duyệt | rejected=từ chối',
   `assigned_to`         INT UNSIGNED  NOT NULL               COMMENT 'FK → users.id (Sales ký kết)',
   `notes`               TEXT          NULL                   COMMENT 'Ghi chú hợp đồng',
+  `attachment_url`      VARCHAR(1000) NULL                   COMMENT 'Link file bản cứng hợp đồng (Sales upload)',
+  `reject_reason`       TEXT          NULL                   COMMENT 'Lý do Manager không duyệt hợp đồng',
   -- Cờ chống gửi thông báo trùng
   `warn_30_sent`        TINYINT(1)    NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo 30 ngày',
   `warn_7_sent`         TINYINT(1)    NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo 7 ngày',
@@ -338,52 +335,24 @@ CREATE TABLE IF NOT EXISTS `contract_renewal_history` (
   COMMENT='Lịch sử gia hạn / nâng cấp hợp đồng';
 
 -- ----------------------------------------------------------------
--- 12. ticket_types
---     Danh mục loại ticket – Admin cấu hình.
---     Ví dụ: Kỹ thuật | Thanh toán | Hướng dẫn sử dụng | Khiếu nại
--- ----------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `ticket_types` (
-  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name`       VARCHAR(100) NOT NULL           COMMENT 'Tên loại ticket hiển thị',
-  `code`       VARCHAR(50)  NOT NULL           COMMENT 'Mã code ngắn – unique (technical|payment|...)',
-  `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_tt_code` (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='Danh mục loại ticket hỗ trợ';
-
--- ----------------------------------------------------------------
--- 13. tickets
---     Yêu cầu hỗ trợ từ khách hàng.
+-- 12. tickets
+--     Yêu cầu hỗ trợ từ khách hàng (Đã tinh gọn, loại bỏ tính năng Chat/Comment).
 --     Vòng đời: open → processing → resolved → closed
---     Auto-close: 48h sau khi resolved nếu không có phản hồi.
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `tickets` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `title`                VARCHAR(300) NOT NULL               COMMENT 'Tiêu đề tóm tắt vấn đề',
-  `description`          TEXT         NOT NULL               COMMENT 'Mô tả chi tiết vấn đề',
+  `title`                VARCHAR(300) NOT NULL               COMMENT 'Tiêu đề / Tóm tắt lỗi',
+  `description`          TEXT         NOT NULL               COMMENT 'Mô tả chi tiết vấn đề ban đầu',
+  `resolution_notes`     TEXT         NULL                   COMMENT 'Ghi chú cách giải quyết, nguyên nhân lỗi (nội bộ)',
   `customer_id`          INT UNSIGNED NOT NULL               COMMENT 'FK → customers.id',
   `contract_id`          INT UNSIGNED NULL                   COMMENT 'FK → contracts.id (tùy chọn)',
-  `ticket_type_id`       INT UNSIGNED NOT NULL               COMMENT 'FK → ticket_types.id',
-  `priority`             ENUM(
-                           'low',
-                           'medium',
-                           'high',
-                           'urgent'
-                         )            NOT NULL DEFAULT 'medium' COMMENT 'Mức độ ưu tiên xử lý',
-  `status`               ENUM(
-                           'open',
-                           'processing',
-                           'resolved',
-                           'closed'
-                         )            NOT NULL DEFAULT 'open'   COMMENT 'Vòng đời ticket',
+  `priority`             ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium' COMMENT 'Mức độ ưu tiên',
+  `status`               ENUM('open','processing','resolved','closed') NOT NULL DEFAULT 'open' COMMENT 'Vòng đời ticket',
   `assigned_to`          INT UNSIGNED NULL                   COMMENT 'FK → users.id (CSKH / Kỹ thuật)',
   `created_by`           INT UNSIGNED NOT NULL               COMMENT 'FK → users.id (người tạo)',
   `resolved_at`          DATETIME     NULL                   COMMENT 'Thời điểm chuyển sang resolved',
   `closed_at`            DATETIME     NULL                   COMMENT 'Thời điểm đóng ticket',
-  `last_updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Dùng để tính stale (reset khi có comment)',
+  `last_updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Dùng để tính stale (reset khi update notes/status)',
   `stale_notified`       TINYINT(1)   NOT NULL DEFAULT 0     COMMENT '1 = đã gửi cảnh báo stale 36h',
   `resolved_remind_sent` TINYINT(1)   NOT NULL DEFAULT 0     COMMENT '1 = đã nhắc sắp tự đóng sau 24h',
   `created_at`           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -401,42 +370,15 @@ CREATE TABLE IF NOT EXISTS `tickets` (
     FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_tkt_contract`
     FOREIGN KEY (`contract_id`) REFERENCES `contracts` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_tkt_type`
-    FOREIGN KEY (`ticket_type_id`) REFERENCES `ticket_types` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_tkt_assigned`
     FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_tkt_created_by`
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='Ticket yêu cầu hỗ trợ từ khách hàng';
+  COMMENT='Ticket yêu cầu hỗ trợ (rút gọn)';
 
 -- ----------------------------------------------------------------
--- 14. ticket_comments
---     Nội dung trao đổi trong ticket.
---     is_internal=1 : ghi chú nội bộ (không hiển thị với KH)
---     is_internal=0 : trao đổi với khách hàng
--- ----------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `ticket_comments` (
-  `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `ticket_id`   INT UNSIGNED    NOT NULL           COMMENT 'FK → tickets.id',
-  `user_id`     INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (người viết)',
-  `content`     TEXT            NOT NULL           COMMENT 'Nội dung bình luận / xử lý',
-  `is_internal` TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '0=hiển thị KH | 1=nội bộ',
-  `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (`id`),
-  KEY `idx_tc_ticket`     (`ticket_id`),
-  KEY `idx_tc_created_at` (`created_at`),
-
-  CONSTRAINT `fk_tc_ticket`
-    FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_tc_user`
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  COMMENT='Nội dung trao đổi trong ticket';
-
--- ----------------------------------------------------------------
--- 15. ticket_attachments
+-- 13. ticket_attachments
 --     File đính kèm trong ticket (screenshot, log, hướng dẫn...).
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ticket_attachments` (
@@ -460,7 +402,7 @@ CREATE TABLE IF NOT EXISTS `ticket_attachments` (
   COMMENT='File đính kèm trong ticket';
 
 -- ----------------------------------------------------------------
--- 16. revenues
+-- 14. revenues
 --     Ghi nhận các lần thanh toán hợp đồng.
 --     Chỉ Sales (+ Admin) được tạo bản ghi.
 -- ----------------------------------------------------------------
@@ -504,7 +446,7 @@ CREATE TABLE IF NOT EXISTS `revenues` (
   COMMENT='Bản ghi thanh toán hợp đồng dịch vụ';
 
 -- ----------------------------------------------------------------
--- 17. notifications
+-- 15. notifications
 --     Thông báo hệ thống – sinh tự động bởi cron jobs.
 --     ref_type + ref_id : liên kết đến contract hoặc ticket.
 -- ----------------------------------------------------------------
@@ -529,19 +471,6 @@ CREATE TABLE IF NOT EXISTS `notifications` (
     FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Thông báo hệ thống (in-app )';
-
---đoạn này mới thêm vào. do thay đổi về trạng thái hợp đồng cần phê duyệt của admin và manager
--- 1. Cập nhật ENUM trạng thái (Thêm 'pending' và 'rejected')
-ALTER TABLE contracts 
-MODIFY COLUMN status ENUM('pending', 'active', 'rejected', 'near_expired', 'expired', 'cancelled') NOT NULL DEFAULT 'pending' COMMENT 'pending=chờ duyệt | active=đã duyệt | rejected=từ chối | ...';
-
--- 2. Thêm cột lưu trữ URL file hợp đồng cứng (ảnh/pdf/docs)
-ALTER TABLE contracts
-ADD COLUMN attachment_url VARCHAR(1000) NULL COMMENT 'Link file bản cứng hợp đồng (Sales upload)';
-
--- 3. Thêm cột lưu lý do từ chối
-ALTER TABLE contracts
-ADD COLUMN reject_reason TEXT NULL COMMENT 'Lý do Manager không duyệt hợp đồng';
 
 -- ================================================================
 SET FOREIGN_KEY_CHECKS = 1;

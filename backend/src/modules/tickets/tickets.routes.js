@@ -12,8 +12,6 @@
  * Mount tại: app.js → app.use('/api/tickets', ticketsRoutes)
  *
  * ROUTES (12 endpoints):
- *   GET    /api/tickets/types                       All roles  – Danh sách loại ticket
- *   POST   /api/tickets/types                       Admin      – Tạo loại ticket
  *   GET    /api/tickets/stats                       All roles  – Thống kê
  *   GET    /api/tickets                             All roles  – Danh sách
  *   POST   /api/tickets                             All except Mgr – Tạo ticket
@@ -21,11 +19,10 @@
  *   PUT    /api/tickets/:id                         Writer     – Sửa info
  *   PUT    /api/tickets/:id/status                  Writer     – Đổi trạng thái
  *   PUT    /api/tickets/:id/assign                  Admin+Mgr+CSKH – Assign
- *   POST   /api/tickets/:id/comments               Writer     – Thêm comment
- *   DELETE /api/tickets/:id/comments/:commentId    All roles  – Xóa comment (owner/admin)
  *   POST   /api/tickets/:id/attachments            Writer     – Thêm attachment
+ *   DELETE /api/tickets/:id/attachments/:attId     Writer     – Xóa attachment
  *
- * LƯU Ý: /types và /stats khai báo trước /:id
+ * LƯU Ý: /stats khai báo trước /:id
  * ─────────────────────────────────────────────────────────────────
  */
 require('module-alias/register');
@@ -49,18 +46,6 @@ router.use(authenticate);
 
 // ── Static routes (trước /:id) ───────────────────────────────────
 
-router.get('/types',  allRoles, ctrl.listTypes);
-router.post('/types',
-  isAdmin,
-  [
-    body('name').notEmpty().withMessage('Tên loại ticket không được để trống.'),
-    body('code').notEmpty().withMessage('Code không được để trống.')
-      .matches(/^[a-z_]+$/).withMessage('Code chỉ dùng chữ thường và dấu gạch dưới.'),
-  ],
-  validate,
-  ctrl.createType
-);
-
 router.get('/stats', allRoles, ctrl.stats);
 
 // ── Collection ───────────────────────────────────────────────────
@@ -72,7 +57,6 @@ router.get('/',
     query('limit').optional().isInt({ min: 1, max: 100 }),
     query('status').optional().isIn(VALID_STATUS).withMessage(`status: ${VALID_STATUS.join(' | ')}`),
     query('priority').optional().isIn(VALID_PRIORITY).withMessage(`priority: ${VALID_PRIORITY.join(' | ')}`),
-    query('ticketTypeId').optional().isInt({ min: 1 }),
     query('customerId').optional().isInt({ min: 1 }),
     query('assignedTo').optional().isInt({ min: 1 }),
   ],
@@ -86,7 +70,6 @@ router.post('/',
     body('title').notEmpty().trim().withMessage('Tiêu đề không được để trống.'),
     body('description').notEmpty().trim().withMessage('Mô tả không được để trống.'),
     body('customerId').isInt({ min: 1 }).withMessage('customerId không hợp lệ.'),
-    body('ticketTypeId').isInt({ min: 1 }).withMessage('ticketTypeId không hợp lệ.'),
     body('priority').optional().isIn(VALID_PRIORITY).withMessage(`priority: ${VALID_PRIORITY.join(' | ')}`),
     body('contractId').optional().isInt({ min: 1 }),
   ],
@@ -110,7 +93,7 @@ router.put('/:id',
     body('title').optional().notEmpty().trim(),
     body('description').optional().notEmpty().trim(),
     body('priority').optional().isIn(VALID_PRIORITY),
-    body('ticketTypeId').optional().isInt({ min: 1 }),
+    body('resolutionNotes').optional().isString(),
   ],
   validate,
   ctrl.update
@@ -136,29 +119,6 @@ router.put('/:id/assign',
   ctrl.assign
 );
 
-// ── Comments ─────────────────────────────────────────────────────
-
-router.post('/:id/comments',
-  authorize(...WRITE_ROLES),
-  [
-    param('id').isInt({ min: 1 }),
-    body('content').notEmpty().trim().withMessage('Nội dung comment không được để trống.'),
-    body('isInternal').optional().isBoolean(),
-  ],
-  validate,
-  ctrl.addComment
-);
-
-router.delete('/:id/comments/:commentId',
-  allRoles,
-  [
-    param('id').isInt({ min: 1 }),
-    param('commentId').isInt({ min: 1 }),
-  ],
-  validate,
-  ctrl.deleteComment
-);
-
 // ── Attachments ───────────────────────────────────────────────────
 
 router.post('/:id/attachments',
@@ -172,6 +132,16 @@ router.post('/:id/attachments',
   ],
   validate,
   ctrl.addAttachment
+);
+
+router.delete('/:id/attachments/:attachmentId',
+  authorize(...WRITE_ROLES),
+  [
+    param('id').isInt({ min: 1 }),
+    param('attachmentId').isInt({ min: 1 }),
+  ],
+  validate,
+  ctrl.deleteAttachment
 );
 
 module.exports = router;
