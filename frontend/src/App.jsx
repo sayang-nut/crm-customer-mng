@@ -19,6 +19,7 @@ import LoginLogsPage  from './pages/users/LoginLogsPage';
 import CustomersPage       from './pages/customers/CustomersPage';
 import CustomerDetailPage  from './pages/customers/CustomerDetailPage';
 import CustomerFormPage    from './pages/customers/CustomerFormPage';
+import RevenueFormPage from './pages/revenues/RevenueFormPage';
 
 import SolutionsPage    from './pages/solutions/SolutionsPage';
 import ContractsPage    from './pages/contracts/ContractsPage';
@@ -105,6 +106,9 @@ const AppRoutes = () => (
     <Route path="/dashboard"     element={<WithLayout allowedRoles={['admin','manager']}><DashboardPage /></WithLayout>} />
     <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} />
 
+    {/* Thêm Layout cho trang Thu tiền để giữ nguyên Sidebar và Header */}
+    <Route path="/revenues/:id"  element={<WithLayout allowedRoles={['admin','manager','sales']}><RevenueFormPage /></WithLayout>} />
+    
     <Route path="*" element={<Page404 />} />
   </Routes>
 );

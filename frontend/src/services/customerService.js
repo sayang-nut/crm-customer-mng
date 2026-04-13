@@ -19,8 +19,7 @@ import api from './api';
 
 const customerService = {
 
-  // ── CRUD chính ──────────────────────────────────────────────────
-
+  //CRUD chính 
   /**
    * Danh sách khách hàng có filter + phân trang.
    * @param {{ page, limit, status, industryId, assignedTo, source, search }} params
@@ -30,7 +29,7 @@ const customerService = {
     const cleanParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
     );
-    return api.get('/api/customers', { params: cleanParams });
+    return api.get('/api/customers', { params: cleanParams }).then(r => r.data);
   },
 
   /** Chi tiết 1 khách hàng (kèm contacts) */
@@ -40,7 +39,6 @@ const customerService = {
   /**
    * Tạo khách hàng mới.
    * BE nhận camelCase: companyName, taxCode, industryId, assignedTo, website, source, notes, address
-   *
    * Nếu FE form dùng snake_case (company_name...) → map ở đây trước khi gửi.
    */
   createCustomer: (data) => {
@@ -61,8 +59,7 @@ const customerService = {
   deleteCustomer: (id) =>
     api.delete(`/api/customers/${id}`),
 
-  // ── Status ───────────────────────────────────────────────────────
-
+  // Status 
   /**
    * Đổi trạng thái khách hàng.
    * @param {string} status – lead | active | expired
@@ -101,7 +98,7 @@ const customerService = {
   deleteContact: (customerId, contactId) =>
     api.delete(`/api/customers/${customerId}/contacts/${contactId}`),
 
-  // ── Lookups (dropdown) ────────────────────────────────────────────
+  // ── Lookups (dropdown) 
 
   /** Danh sách ngành nghề cho dropdown */
   getIndustries: () =>

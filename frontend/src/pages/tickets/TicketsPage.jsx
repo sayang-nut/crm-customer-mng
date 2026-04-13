@@ -9,6 +9,7 @@ import ticketsService from '../../services/ticketsService';
 
 import Button from '../../components/common/Button';
 import TicketAddForm from './TicketAddForm';
+import TicketDetailView from './TicketDetailView';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -71,27 +72,6 @@ const fmtTime = (d) => {
   });
 };
 
-const DetailModal = ({ id, onClose }) => {
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-200 !rounded-none !shadow-none bg-white">
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-2xl font-black text-gray-900">Chi tiết Ticket #{id}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">
-            &times;
-          </button>
-        </div>
-        <div className="p-12 text-center text-gray-500">
-          Ticket detail modal (full implementation ready)
-        </div>
-      </Card>
-    </div>
-  );
-};
-
 const TicketsPage = () => {
   const { user } = useAuth();
   const canWrite = ['admin', 'sales', 'cskh', 'technical'].includes(user?.role);
@@ -151,6 +131,8 @@ const TicketsPage = () => {
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
         {modal === 'create' ? (
           <TicketAddForm onCancel={() => setModal(null)} onSaved={closeRefresh} />
+        ) : modal?.type === 'detail' ? (
+          <TicketDetailView id={modal.id} onBack={() => setModal(null)} onRefresh={fetchAll} />
         ) : (
           <>
         {/* Header */}
@@ -371,15 +353,6 @@ const TicketsPage = () => {
           </>
         )}
       </div>
-
-      {modal?.type === 'detail' && (
-        <DetailModal
-          id={modal.id}
-          onClose={() => setModal(null)}
-          onRefresh={fetchAll}
-          user={user}
-        />
-      )}
     </div>
   );
 };

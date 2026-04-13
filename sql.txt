@@ -420,7 +420,6 @@ CREATE TABLE IF NOT EXISTS `revenues` (
   `payment_date`   DATE          NULL                   COMMENT 'Ngày khách thanh toán thực tế (NULL khi pending)',
   `payment_method` ENUM(
                      'bank_transfer',
-                     'cash',
                      'online'
                    )             NULL                   COMMENT 'Phương thức thanh toán',
   `billing_period` VARCHAR(50)   NULL                   COMMENT 'Kỳ thanh toán: 2025 | 2025-01 | 2025-Q1',

@@ -161,7 +161,7 @@ const getTicketById = async (id, user) => {
 // createTicket
 // ─────────────────────────────────────────────────────────────────
 const createTicket = async (data, userId) => {
-  const { title, description, customerId, contractId, priority } = data;
+  const { title, description, customerId, contractId, priority, assignedTo } = data;
 
   // Validate customer tồn tại
   const [[customer]] = await sequelize.query(
@@ -170,11 +170,25 @@ const createTicket = async (data, userId) => {
   );
   if (!customer) throw new AppError('Khách hàng không tồn tại.', 404);
 
+  let initialStatus = 'open';
+  let finalAssignedTo = null;
+
+  if (assignedTo) {
+    const [[target]] = await sequelize.query(
+      `SELECT id FROM users WHERE id = ? AND status = 'active' LIMIT 1`,
+      { replacements: [Number(assignedTo)] }
+    );
+    if (!target) throw new AppError('Nhân viên kỹ thuật không tồn tại hoặc không hoạt động.', 404);
+    
+    finalAssignedTo = Number(assignedTo);
+    initialStatus = 'processing';
+  }
+
   const [result] = await sequelize.query(
     `INSERT INTO tickets
        (title, description, customer_id, contract_id,
-        priority, status, created_by, last_updated_at)
-     VALUES (?, ?, ?, ?, ?, 'open', ?, NOW())`,
+        priority, status, assigned_to, created_by, last_updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     {
       replacements: [
         title.trim(),
@@ -182,6 +196,8 @@ const createTicket = async (data, userId) => {
         Number(customerId),
         contractId ? Number(contractId) : null,
         priority || TICKET_PRIORITY.MEDIUM,
+        initialStatus,
+        finalAssignedTo,
         userId,
       ],
     }

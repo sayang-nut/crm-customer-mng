@@ -1,26 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import ticketsService from '../../services/ticketsService';
+import customerService from '../../services/customerService';
+import contractsService from '../../services/contractsService';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
+import { useAppSelector } from '../../store/hooks';
+import api from '../../services/api';
 
 const TicketAddForm = ({ onCancel, onSaved }) => {
-  const [types, setTypes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Lấy thông tin user đăng nhập từ Redux store
+  const { user } = useAppSelector((state) => state.auth);
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+
+  const [customers, setCustomers] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [techUsers, setTechUsers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
 
   useEffect(() => {
-    const loadTypes = async () => {
+    const loadCustomers = async () => {
       try {
-        const res = await ticketsService.getTypes();
-        setTypes(res || []);
+        // Fetch danh sách khách hàng (có thể điều chỉnh limit)
+        const res = await customerService.getCustomers({ limit: 100 });
+        setCustomers(res.data || res || []);
       } catch {
-        setTypes([]);
+        setError('Không thể tải danh sách khách hàng.');
       }
     };
-    loadTypes();
-  }, []);
+    loadCustomers();
+
+    // Nếu là Admin/Manager, tải thêm danh sách Kỹ thuật viên
+    if (isAdminOrManager) {
+      api.get('/api/users', { params: { role: 'technical', status: 'active', limit: 100 } })
+        .then(res => setTechUsers(res.data?.data || res.data || []))
+        .catch(err => console.error('Không thể tải danh sách kỹ thuật', err));
+    }
+  }, [isAdminOrManager]);
+
+  const handleCustomerChange = async (e) => {
+    const customerId = e.target.value;
+    setSelectedCustomerId(customerId);
+    setContracts([]); // Reset hợp đồng khi đổi khách hàng
+    if (customerId) {
+      try {
+        const res = await contractsService.getContracts({ customerId, limit: 100 });
+        setContracts(res.data || res || []);
+      } catch (err) {
+        console.error('Không thể tải hợp đồng', err);
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,9 +67,9 @@ const TicketAddForm = ({ onCancel, onSaved }) => {
         title: fd.get('title'),
         description: fd.get('description'),
         customerId: Number(fd.get('customerId')),
-        ticketTypeId: Number(fd.get('ticketTypeId')),
         priority: fd.get('priority'),
         contractId: fd.get('contractId') ? Number(fd.get('contractId')) : undefined,
+        assignedTo: fd.get('assignedTo') ? Number(fd.get('assignedTo')) : undefined,
       });
       onSaved();
     } catch (err) {
@@ -73,27 +107,17 @@ const TicketAddForm = ({ onCancel, onSaved }) => {
             <h3 className="text-lg font-bold text-gray-900 mb-4">Thông tin chung</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Customer ID *</label>
-                <Input
-                  name="customerId"
-                  type="number"
-                  min="1"
-                  required
-                  placeholder="ID khách hàng"
-                  className="!rounded-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại ticket *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Khách hàng *</label>
                 <select
-                  name="ticketTypeId"
+                  name="customerId"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={selectedCustomerId}
+                  onChange={handleCustomerChange}
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 !rounded-none"
                 >
-                  <option value="">Chọn loại</option>
-                  {types.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                  <option value="">-- Chọn khách hàng --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.company_name || c.companyName}</option>
                   ))}
                 </select>
               </div>
@@ -103,7 +127,7 @@ const TicketAddForm = ({ onCancel, onSaved }) => {
                 <select
                   name="priority"
                   defaultValue="medium"
-                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 !rounded-none"
                 >
                   <option value="low">Thấp</option>
                   <option value="medium">Trung bình</option>
@@ -113,15 +137,34 @@ const TicketAddForm = ({ onCancel, onSaved }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Contract ID (tuỳ chọn)</label>
-                <Input
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Hợp đồng liên quan (tuỳ chọn)</label>
+                <select
                   name="contractId"
-                  type="number"
-                  min="1"
-                  placeholder="Liên kết hợp đồng nếu có"
-                  className="!rounded-none"
-                />
+                  disabled={!selectedCustomerId || contracts.length === 0}
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 !rounded-none"
+                >
+                  <option value="">-- Không liên kết hợp đồng --</option>
+                  {contracts.map((c) => (
+                    <option key={c.id} value={c.id}>#{c.contract_number}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Dropdown Phân công: Chỉ hiển thị cho Admin và Manager */}
+              {isAdminOrManager && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Phân công người xử lý (Kỹ thuật)</label>
+                  <select
+                    name="assignedTo"
+                    className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 !rounded-none"
+                  >
+                    <option value="">-- Chưa phân công (Trạng thái: Open) --</option>
+                    {techUsers.map((u) => (
+                      <option key={u.id} value={u.id}>{u.full_name || u.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         </Card>

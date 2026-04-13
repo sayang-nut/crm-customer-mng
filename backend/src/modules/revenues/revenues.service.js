@@ -99,7 +99,7 @@ const listRevenues = async (user, {
      JOIN solutions s  ON s.id  = c.solution_id
      JOIN users u      ON u.id  = r.created_by
      WHERE ${where}
-     ORDER BY r.payment_date DESC
+     ORDER BY r.created_at DESC
      LIMIT ? OFFSET ?`,
     { replacements: [...params, limitNum, offset] }
   );
@@ -124,7 +124,7 @@ const getById = async (id, user) => {
 
 // createRevenue
 const createRevenue = async (data, userId) => {
-  const { contractId, customerId, amount, paymentDate, paymentMethod, billingPeriod, notes } = data;
+  const { contractId, customerId, amount, status, paymentDate, paymentMethod, billingPeriod, notes, proofUrl } = data;
 
   // Validate contract tồn tại và thuộc customer
   const [[contract]] = await sequelize.query(
@@ -143,17 +143,21 @@ const createRevenue = async (data, userId) => {
     throw new AppError(`paymentMethod phải là: ${VALID_METHODS.join(' | ')}.`, 400);
   }
 
+  if (status === 'paid' && !proofUrl) {
+    throw new AppError('Bắt buộc phải đính kèm chứng từ thanh toán để xác nhận đã thu tiền.', 400);
+  }
+
   const [result] = await sequelize.query(
     `INSERT INTO revenues
-       (contract_id, customer_id, amount, payment_date, payment_method,
-        billing_period, notes, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (contract_id, customer_id, amount, status, due_date, payment_date, payment_method,
+        billing_period, notes, proof_url, created_by)
+     VALUES (?, ?, ?, ?, CURDATE(), ?, ?, ?, ?, ?, ?)`,
     {
       replacements: [
         Number(contractId), Number(customerId),
-        Number(amount), paymentDate,
+        Number(amount), status || 'pending', paymentDate || null,
         paymentMethod || PAYMENT_METHOD.BANK_TRANSFER,
-        billingPeriod || null, notes || null, userId,
+        billingPeriod || null, notes || null, proofUrl || null, userId,
       ],
     }
   );
