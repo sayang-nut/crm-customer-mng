@@ -80,18 +80,6 @@ const Header = () => {
                 
                 <div className="max-h-80 overflow-y-auto">
                   {/* Demo notifications */}
-                  <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-dark-900">Hợp đồng sắp hết hạn</p>
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                          Hợp đồng ABC Company sẽ hết hạn trong 7 ngày
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">2 giờ trước</p>
-                      </div>
-                    </div>
-                  </div>
                   
                   <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors">
                     <div className="flex items-start gap-3">

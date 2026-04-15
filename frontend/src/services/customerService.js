@@ -29,7 +29,14 @@ const customerService = {
     const cleanParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
     );
-    return api.get('/api/customers', { params: cleanParams }).then(r => r.data);
+    return api.get('/api/customers', { params: cleanParams }).then(r => {
+      let payload = r.data;
+      // Bóc tách lớp vỏ bọc thừa của Backend { success: true, data: { data: [], total: ... } }
+      if (payload && payload.data && payload.data.data !== undefined) {
+        return payload.data;
+      }
+      return payload;
+    });
   },
 
   /** Chi tiết 1 khách hàng (kèm contacts) */
@@ -72,8 +79,7 @@ const customerService = {
   getStatusHistory: (id) =>
     api.get(`/api/customers/${id}/status-history`),
 
-  // ── Contacts ─────────────────────────────────────────────────────
-
+  // Contacts
   /** Thêm đầu mối liên hệ */
   addContact: (customerId, data) =>
     api.post(`/api/customers/${customerId}/contacts`, {

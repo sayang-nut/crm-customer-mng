@@ -30,7 +30,6 @@
  *   TICKET_STALE_HOURS           (default 36)
  *   TICKET_RESOLVED_CLOSE_HOURS  (default 48)
  *   TICKET_RESOLVED_REMIND_HOURS (default 24)
- * ─────────────────────────────────────────────────────────────────
  */
 
 const cron      = require('node-cron');
@@ -53,10 +52,7 @@ const getCskhIds = async () => {
   );
   return rows.map(r => r.id);
 };
-
-// ═══════════════════════════════════════════════════════════════════
 // JOB 1: Contract expiry – chạy 08:00 mỗi ngày (UTC+7)
-// ═══════════════════════════════════════════════════════════════════
 const contractExpiryJob = cron.schedule('0 8 * * *', async () => {
   logger.info('[CRON] Contract expiry check started…');
   try {
@@ -165,9 +161,8 @@ const contractExpiryJob = cron.schedule('0 8 * * *', async () => {
   }
 }, { timezone: 'Asia/Ho_Chi_Minh' });
 
-// ═══════════════════════════════════════════════════════════════════
 // JOB 2: Ticket stale check – chạy mỗi giờ
-// ═══════════════════════════════════════════════════════════════════
+
 const ticketStaleJob = cron.schedule('0 * * * *', async () => {
   logger.info('[CRON] Ticket stale check started…');
   try {
@@ -179,7 +174,7 @@ const ticketStaleJob = cron.schedule('0 * * * *', async () => {
 
     const mgrs = await getManagerIds();
 
-    // ── Trigger 4: Ticket stale ≥ 36h ─────────────────────────
+    // ── Trigger 4: Ticket stale ≥ 36h 
     const [stale] = await sequelize.query(
       `SELECT t.id, t.title, t.assigned_to, t.created_by, cu.company_name,
               TIMESTAMPDIFF(HOUR, t.last_updated_at, NOW()) AS stale_hours
@@ -246,9 +241,7 @@ const ticketStaleJob = cron.schedule('0 * * * *', async () => {
   }
 }, { timezone: 'Asia/Ho_Chi_Minh' });
 
-// ─────────────────────────────────────────────────────────────────
 // Export
-// ─────────────────────────────────────────────────────────────────
 const startCronJobs = () => {
   contractExpiryJob.start();
   ticketStaleJob.start();

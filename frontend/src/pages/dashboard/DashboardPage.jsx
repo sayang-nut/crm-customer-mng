@@ -1,8 +1,5 @@
 /**
  * @file      frontend/src/pages/dashboard/DashboardPage.jsx
- * @location  frontend/src/pages/dashboard/
- * @theme     WHITE PLAIN - Sync Header/Sidebar/MainLayout
- * ─────────────────────────────────────────────────────────────────
  * VAI TRÒ: Trang Dashboard – KPI theo role (Admin/Sales/CSKH)
  */
 
@@ -30,14 +27,24 @@ const DashboardPage = () => {
     const fetch = async () => {
       setLoading(true);
       try {
+        let resData;
         if (['admin', 'manager'].includes(user?.role)) 
-          setData(await dashboardService.getAdmin());
+          resData = await dashboardService.getAdmin();
         else if (user?.role === 'sales') 
-          setData(await dashboardService.getSales());
+          resData = await dashboardService.getSales();
         else if (user?.role === 'cskh') 
-          setData(await dashboardService.getCSKH());
+          resData = await dashboardService.getCSKH();
         else 
-          setData({});
+          resData = {};
+          
+        // Bóc tách dữ liệu an toàn (tránh việc Axios hoặc Backend bọc data nhiều lớp)
+        // Vòng lặp giúp lột bỏ mọi lớp .data bên ngoài để lấy chính xác dữ liệu lõi
+        let payload = resData;
+        while (payload && payload.data !== undefined) {
+          payload = payload.data;
+        }
+        setData(payload || {});
+        
       } finally { 
         setLoading(false); 
       }
@@ -101,7 +108,7 @@ const AdminDashboard = ({ data }) => (
       <StatsCard 
         title="Khách hàng" 
         value={data.customerStats?.total || 0}
-  
+        
         changeType="up"
         icon={Users}
         color="primary"

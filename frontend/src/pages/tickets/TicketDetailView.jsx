@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useAuth } from '../../store/authContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+import uploadService from '../../services/uploadService';
 import Badge from '../../components/common/Badge';
 import Loading from '../../components/common/Loading';
 import toast from 'react-hot-toast';
@@ -117,14 +118,43 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
     
     try {
       const toastId = toast.loading('Đang tải lên...');
-      // Giả định API cho file đính kèm
-      await api.post(`/api/tickets/${id}/attachments`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+
+      // Bước 1: Upload file thông qua service dùng chung
+      const uploadRes = await uploadService.uploadSingle(formData);
+      
+      // Bóc tách URL dự phòng nhiều cấu trúc trả về từ Service
+      const resData = uploadRes?.data || uploadRes; // Nếu uploadRes là Axios Response thì lấy phần .data
+      let fileUrl = null;
+      
+      if (typeof resData === 'string') {
+        fileUrl = resData; 
+      } else if (resData) {
+        fileUrl = resData.url || resData.fileUrl || resData.file_url || 
+                  resData.data?.url || resData.data?.fileUrl || resData.data?.file_url ||
+                  (typeof resData.data === 'string' ? resData.data : null);
+      }
+      
+      if (!fileUrl) {
+        // Ném thẳng dữ liệu raw ra thông báo lỗi để xem nó có hình thù gì
+        throw new Error('Dữ liệu BE trả về: ' + JSON.stringify(resData || 'Rỗng').substring(0, 150));
+      }
+
+      // Bước 2: Gắn URL và siêu dữ liệu file vào Ticket
+      await api.post(`/api/tickets/${id}/attachments`, {
+        fileName: file.name,
+        fileUrl: fileUrl,
+        fileSize: file.size,
+        mimeType: file.type
       });
+
       toast.success('Tải file lên thành công', { id: toastId });
       loadTicket();
     } catch (err) {
-      toast.error('Lỗi tải file. Vui lòng kiểm tra lại endpoint Backend.');
+      // IN LỖI RA CONSOLE ĐỂ DEBUG
+      console.error('Chi tiết lỗi upload:', err, err.response?.data);
+      toast.error(err.response?.data?.message || err.message || 'Lỗi tải file. Vui lòng thử lại.');
+    } finally {
+      e.target.value = null; // Reset input để có thể chọn lại cùng 1 file
     }
   };
 

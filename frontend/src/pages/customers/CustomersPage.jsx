@@ -222,7 +222,7 @@ const CustomersPage = () => {
             Quản lý khách hàng
           </h1>
           <p className="text-gray-700 text-lg font-medium">
-            Tổng cộng <span className="font-black text-primary-600">{pagination.total}</span> khách hàng
+          Tổng cộng <span className="font-black text-primary-600">{pagination?.total || 0}</span> khách hàng
           </p>
         </div>
 
@@ -334,7 +334,7 @@ const CustomersPage = () => {
           <div className="p-20 flex justify-center">
              <Loading />
           </div>
-        ) : items.length === 0 ? (
+      ) : items?.length === 0 ? (
           <EmptyState
             icon={Building2}
             title="Chưa có khách hàng"
@@ -355,8 +355,8 @@ const CustomersPage = () => {
             <div className="p-6 border-t border-gray-200 bg-gray-50">
               <Pagination
                 currentPage={pagination.page}
-                totalPages={pagination.totalPages}
-                totalItems={pagination.total}
+                totalPages={pagination?.totalPages || 1}
+                totalItems={pagination?.total || 0}
                 itemsPerPage={pagination.limit}
                 onPageChange={handlePageChange}
               />

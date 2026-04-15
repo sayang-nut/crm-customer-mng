@@ -40,7 +40,7 @@ export const fetchCustomers = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const res = await customerService.getCustomers(params);
-      return res.data;
+      return res; // Trả về nguyên vẹn do service đã bóc tách sẵn { data, total, page... }
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Lỗi tải danh sách');
     }
@@ -154,12 +154,15 @@ const customerSlice = createSlice({
       .addCase(fetchCustomers.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(fetchCustomers.fulfilled, (state, action) => {
         state.loading        = false;
-        state.items          = action.payload.data || [];
+        const payload        = action.payload || {};
+        
+        // Bóc tách dữ liệu mảng an toàn
+        state.items          = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);
         state.pagination = {
-          page:       action.payload.page,
-          limit:      action.payload.limit,
-          total:      action.payload.total,
-          totalPages: action.payload.totalPages,
+          page:       payload.page || state.pagination.page,
+          limit:      payload.limit || state.pagination.limit,
+          total:      payload.total || 0,
+          totalPages: payload.totalPages || 1,
         };
       })
       .addCase(fetchCustomers.rejected, (state, action) => {

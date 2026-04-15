@@ -27,7 +27,7 @@ const dashboardRoutes     = require('./modules/dashboard/dashboard.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const uploadRoutes        = require('./modules/upload/upload.routes');
 
-console.log('✅ Dashboard routes loaded:', dashboardRoutes);
+console.log('Dashboard routes loaded:', dashboardRoutes);
 
 const app = express();
 

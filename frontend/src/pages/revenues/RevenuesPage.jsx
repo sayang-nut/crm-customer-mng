@@ -173,7 +173,6 @@ const RevenuesPage = () => {
             <Button
               variant="danger"
               size="sm"
-              icon={Trash2}
               className="!rounded-md !px-3 !py-1.5 !text-xs"
               onClick={(e) => {
                 e.stopPropagation();

@@ -80,7 +80,7 @@ api.interceptors.response.use(
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
 
-      // ✅ Chỉ redirect khi chưa ở trang login
+      // Chỉ redirect khi chưa ở trang login
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }

@@ -4,45 +4,21 @@
  * @file     backend/src/modules/notifications/notifications.service.js
  * @location backend/src/modules/notifications/notifications.service.js
  * ─────────────────────────────────────────────────────────────────
- * @requires axios             → Telegram Bot API
  * @requires ../../config/database  → sequelize
  * @requires ../../config/logger    → winston
  * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: In-app notification + Telegram push
+ * VAI TRÒ: In-app notification management
  *
- *   createNotification – Tạo 1 notification, gửi Telegram nếu có chatId
+ *   createNotification – Tạo 1 notification cho user
  *   notifyUsers        – Gửi cho danh sách userId (dùng trong cron)
  *   listNotifications  – Danh sách của user, có filter unread
  *   markRead           – Đánh dấu 1 notification đã đọc
  *   markAllRead        – Đánh dấu tất cả đã đọc
  *   getUnreadCount     – Số notification chưa đọc (cho badge)
- *   sendTelegram       – Gửi tin nhắn Telegram trực tiếp
- * ─────────────────────────────────────────────────────────────────
  */
 
-const axios    = require('axios');
 const sequelize = require('../../config/database');
 const logger   = require('../../config/logger');
-
-const BOT_TOKEN       = () => process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_ON     = () => process.env.TELEGRAM_ENABLED === 'true';
-
-// ─────────────────────────────────────────────────────────────────
-// sendTelegram
-// ─────────────────────────────────────────────────────────────────
-const sendTelegram = async (chatId, message) => {
-  if (!TELEGRAM_ON() || !BOT_TOKEN() || !chatId) return false;
-  try {
-    await axios.post(
-      `https://api.telegram.org/bot${BOT_TOKEN()}/sendMessage`,
-      { chat_id: chatId, text: message, parse_mode: 'HTML' }
-    );
-    return true;
-  } catch (err) {
-    logger.error('[TELEGRAM] Send error:', err.response?.data || err.message);
-    return false;
-  }
-};
 
 // ─────────────────────────────────────────────────────────────────
 // createNotification
@@ -54,24 +30,7 @@ const createNotification = async (userId, type, title, message, refType = null, 
     { replacements: [userId, type, title, message, refType, refId] }
   );
 
-  // Gửi Telegram nếu user có chatId
-  const [[user]] = await sequelize.query(
-    `SELECT telegram_chat_id FROM users WHERE id = ? AND status = 'active' LIMIT 1`,
-    { replacements: [userId] }
-  );
-
-  let sentTelegram = false;
-  if (user?.telegram_chat_id) {
-    sentTelegram = await sendTelegram(user.telegram_chat_id, `🔔 <b>${title}</b>\n\n${message}`);
-    if (sentTelegram) {
-      await sequelize.query(
-        `UPDATE notifications SET sent_telegram = 1 WHERE id = ?`,
-        { replacements: [result.insertId] }
-      );
-    }
-  }
-
-  return { id: result.insertId, sentTelegram };
+  return { id: result.insertId };
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -112,7 +71,7 @@ const listNotifications = async (userId, { page = 1, limit = 20, unreadOnly } = 
     { replacements: [userId] }
   );
   const [rows] = await sequelize.query(
-    `SELECT id, type, title, message, ref_type, ref_id, is_read, sent_telegram, created_at
+    `SELECT id, type, title, message, ref_type, ref_id, is_read, created_at
      FROM notifications WHERE ${where}
      ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     { replacements: [...params, limitNum, offset] }
@@ -154,7 +113,6 @@ const getUnreadCount = async (userId) => {
 };
 
 module.exports = {
-  sendTelegram,
   createNotification,
   notifyUsers,
   listNotifications,
