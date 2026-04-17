@@ -26,7 +26,6 @@
  * LƯU Ý THỨ TỰ ROUTE:
  *   Static path (/login-logs, /profile) phải khai báo TRƯỚC /:id
  *   để Express không nhầm "login-logs" là một :id param.
- * ─────────────────────────────────────────────────────────────────
  */
 
 const express = require('express');

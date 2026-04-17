@@ -35,7 +35,7 @@ const STATUS_LABELS = {
   locked: 'Bị khoá' 
 };
 
-// ── Reusable UI pieces ────────────────────────────────────────────
+// Reusable UI pieces
 const Badge = ({ type, value, label }) => {
   const map = type === 'role' ? ROLE_COLORS : STATUS_COLORS;
   const colorClass = map[value] || 'bg-gray-400 text-white';

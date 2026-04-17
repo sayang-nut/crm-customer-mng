@@ -36,9 +36,9 @@ const { validate } = require('@middleware/auth/validate');
 const { ROLES, CUSTOMER_STATUS } = require('@config/constants');
 
 const VALID_STATUS   = Object.values(CUSTOMER_STATUS);       // lead, active, expired
-const CAN_WRITE      = [ROLES.ADMIN, ROLES.SALES];
-const CAN_WRITE_CTT  = [ROLES.ADMIN, ROLES.SALES, ROLES.CSKH];
-const CAN_STATUS     = [ROLES.ADMIN, ROLES.MANAGER, ROLES.SALES];
+const CAN_WRITE      = ['admin', 'manager', 'sales'];
+const CAN_WRITE_CTT  = ['admin', 'manager', 'sales', 'cskh'];
+const CAN_STATUS     = ['admin', 'manager', 'sales'];
 
 router.use(authenticate);
 
@@ -48,7 +48,7 @@ router.use(authenticate);
 router.get('/industries', allRoles, ctrl.industries);
 
 /** GET /api/customers/sales-users */
-router.get('/sales-users', authorize(ROLES.ADMIN, ROLES.MANAGER), ctrl.salesUsers);
+router.get('/sales-users', authorize('admin', 'manager'), ctrl.salesUsers);
 
 // ── Collection ────────────────────────────────────────────────────
 

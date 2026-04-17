@@ -108,11 +108,11 @@ const customerService = {
 
   /** Danh sách ngành nghề cho dropdown */
   getIndustries: () =>
-    api.get('/api/customers/industries'),
+    api.get('/api/customers/industries').then((r) => r.data?.data || []),
 
   /** Danh sách Sales/Admin/Manager có thể assign */
   getSalesUsers: () =>
-    api.get('/api/customers/sales-users'),
+    api.get('/api/customers/sales-users').then((r) => r.data?.data || []),
 };
 
 // ── Helper: map snake_case FE → camelCase BE ─────────────────────

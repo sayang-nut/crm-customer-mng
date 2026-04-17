@@ -156,7 +156,7 @@ const CustomersPage = () => {
             <User className="w-4 h-4 text-gray-500" />
           </div>
           <span className="text-sm text-gray-700 font-medium">
-            {row.assigned_sales?.full_name || 'Chưa phân công'}
+            {row.assigned_to_name || 'Chưa phân công'}
           </span>
         </div>
       ),

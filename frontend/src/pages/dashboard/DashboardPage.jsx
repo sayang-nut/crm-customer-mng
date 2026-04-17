@@ -80,7 +80,7 @@ const DashboardPage = () => {
       {/* Header - WHITE PLAIN */}
       <header className="space-y-2 pb-8 border-b border-gray-200">
         <h1 className="text-4xl font-black text-dark-900 tracking-tight">
-          Dashboard  {/* ✅ BLACK TEXT - visible */}
+          Dashboard  
         </h1>
         <div className="flex flex-wrap items-center gap-4">
           <p className="text-gray-700 text-lg font-medium">
@@ -100,7 +100,7 @@ const DashboardPage = () => {
   );
 };
 
-// ✅ ADMIN DASHBOARD - WHITE PLAIN
+// ADMIN DASHBOARD 
 const AdminDashboard = ({ data }) => (
   <div className="space-y-8">
     {/* KPI Grid */}

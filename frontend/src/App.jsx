@@ -94,9 +94,9 @@ const AppRoutes = () => (
 
     {/* Customers */}
     <Route path="/customers"          element={<WithLayout allowedRoles={['admin','manager','sales','cskh']}><CustomersPage /></WithLayout>} />
-    <Route path="/customers/new"      element={<WithLayout allowedRoles={['admin','sales']}><CustomerFormPage /></WithLayout>} />
+    <Route path="/customers/new"      element={<WithLayout allowedRoles={['admin','manager','sales']}><CustomerFormPage /></WithLayout>} />
     <Route path="/customers/:id"      element={<WithLayout allowedRoles={['admin','manager','sales','cskh']}><CustomerDetailPage /></WithLayout>} />
-    <Route path="/customers/:id/edit" element={<WithLayout allowedRoles={['admin','sales']}><CustomerFormPage /></WithLayout>} />
+    <Route path="/customers/:id/edit" element={<WithLayout allowedRoles={['admin','manager','sales']}><CustomerFormPage /></WithLayout>} />
 
     {/* Others */}
     <Route path="/solutions"     element={<WithLayout><SolutionsPage /></WithLayout>} />
@@ -105,8 +105,7 @@ const AppRoutes = () => (
     <Route path="/revenues"      element={<WithLayout allowedRoles={['admin','manager','sales']}><RevenuesPage /></WithLayout>} />
     <Route path="/dashboard"     element={<WithLayout allowedRoles={['admin','manager']}><DashboardPage /></WithLayout>} />
     <Route path="/notifications" element={<WithLayout><NotificationsPage /></WithLayout>} />
-
-    {/* Thêm Layout cho trang Thu tiền để giữ nguyên Sidebar và Header */}
+    
     <Route path="/revenues/:id"  element={<WithLayout allowedRoles={['admin','manager','sales']}><RevenueFormPage /></WithLayout>} />
     
     <Route path="*" element={<Page404 />} />

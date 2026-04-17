@@ -3,22 +3,41 @@
  * @theme    WHITE PLAIN - Sync LoginPage
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Search, Bell, User, Settings, LogOut, ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/authContext';
+import notificationsService from '../../services/notificationsService';
 
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
   const userMenuRef = useRef(null);
   const notificationRef = useRef(null);
   
-  // Click outside logic giữ nguyên
+  const loadNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    setNotificationsError('');
+
+    try {
+      const res = await notificationsService.getList({ page: 1, limit: 5 });
+      setNotifications(res.data || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch (err) {
+      setNotificationsError('Không thể tải thông báo.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -32,9 +51,42 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (showNotifications) {
+      loadNotifications();
+    }
+  }, [showNotifications, loadNotifications]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const formatTime = (value) => {
+    if (!value) return '';
+    const now = new Date();
+    const date = new Date(value);
+    const diffMinutes = Math.floor((now - date) / 60000);
+    if (diffMinutes < 1) return 'Vừa xong';
+    if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} giờ trước`;
+    return date.toLocaleDateString('vi-VN');
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification?.is_read) {
+      try {
+        await notificationsService.markRead(notification.id);
+      } catch (err) {
+        // ignore failure
+      }
+    }
+    setShowNotifications(false);
+    navigate('/notifications');
   };
 
   const initials = user?.fullName?.charAt(0)?.toUpperCase() || 'A';
@@ -64,39 +116,70 @@ const Header = () => {
           {/* Notifications */}
           <div className="relative" ref={notificationRef}>
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => setShowNotifications((prev) => !prev)}
               className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors group"
               aria-label="Thông báo"
             >
               <Bell className="w-5 h-5 text-gray-600 group-hover:text-primary-500" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1.2rem] h-5 px-1 text-[10px] font-semibold text-white bg-red-500 rounded-full flex items-center justify-center border-2 border-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {showNotifications && (
-              <div className="dropdown-menu right-0 w-80 shadow-lg border border-gray-200">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+              <div className="dropdown-menu right-0 w-80 shadow-lg border border-gray-200 bg-white rounded-xl">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-xl">
                   <h3 className="font-semibold text-dark-900 text-sm uppercase tracking-wide">Thông báo</h3>
                 </div>
-                
+
                 <div className="max-h-80 overflow-y-auto">
-                  {/* Demo notifications */}
-                  
-                  <div className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-dark-900">Ticket mới</p>
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                          XYZ Restaurant tạo ticket hỗ trợ kỹ thuật
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">5 giờ trước</p>
-                      </div>
-                    </div>
-                  </div>
+                  {notificationsLoading ? (
+                    <div className="p-6 text-center text-sm text-gray-500">Đang tải thông báo...</div>
+                  ) : notificationsError ? (
+                    <div className="p-6 text-center text-sm text-red-600">{notificationsError}</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-gray-500">Không có thông báo mới.</div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => handleNotificationClick(notification)}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-2.5 h-2.5 rounded-full mt-2 flex-shrink-0 ${notification.is_read ? 'bg-gray-400' : 'bg-blue-500'}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-dark-900 truncate">{notification.title}</p>
+                              <span className="text-xs text-gray-500">{formatTime(notification.created_at)}</span>
+                            </div>
+                            <p
+                              className="text-xs text-gray-600 mt-1 line-clamp-2"
+                              dangerouslySetInnerHTML={{
+                                __html: notification.message
+                                  .replace(/<b>/g, '<strong style="color:#1f2937;font-weight:700">')
+                                  .replace(/<\/b>/g, '</strong>'),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
-                
-                <div className="px-4 py-3 border-t border-gray-200 text-center bg-gray-50 rounded-b-lg">
-                  <button className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors">
+
+                <div className="px-4 py-3 border-t border-gray-200 text-center bg-gray-50 rounded-b-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNotifications(false);
+                      navigate('/notifications');
+                    }}
+                    className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                  >
                     Xem tất cả thông báo
                   </button>
                 </div>

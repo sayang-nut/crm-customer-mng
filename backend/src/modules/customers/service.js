@@ -178,7 +178,7 @@ const getCustomerById = async (id, user) => {
 
 // createCustomer
 const createCustomer = async (data, userId) => {
-  const { companyName, taxCode, address, industryId, website, source, assignedTo, notes } = data;
+  const { companyName, taxCode, address, industryId, website, source, notes, assignedTo } = data;
 
   // Kiểm tra mã số thuế trùng
   if (taxCode && taxCode.trim()) {
@@ -202,7 +202,7 @@ const createCustomer = async (data, userId) => {
         industryId     || null,
         website        || null,
         source         || null,
-        assignedTo     || userId,
+        assignedTo     || userId, // Nếu có người phân công thì lấy, không thì lấy người tạo
         notes          || null,
         userId,
       ],
@@ -269,8 +269,24 @@ const updateCustomer = async (id, data, user) => {
   if (source      !== undefined) { fields.push('source = ?');       values.push(source); }
   if (notes       !== undefined) { fields.push('notes = ?');        values.push(notes); }
 
-  // Chỉ Admin/Manager được đổi assigned_to
-  if (assignedTo !== undefined && [ROLES.ADMIN, ROLES.MANAGER].includes(user.role)) {
+  // Xử lý thay đổi người phụ trách (assigned_to)
+  if (assignedTo !== undefined && assignedTo != existing.assigned_to) {
+    // 1. Kiểm tra quyền của người đang thao tác
+    if (!['admin', 'manager'].includes(user.role)) {
+      throw new AppError('Bạn không có quyền thay đổi người phụ trách khách hàng.', 403);
+    }
+
+    // 2. Ràng buộc Role nhận (nếu có chọn người mới)
+    if (assignedTo) {
+      const [[targetUser]] = await sequelize.query(
+        `SELECT id, role, status FROM users WHERE id = ? LIMIT 1`,
+        { replacements: [Number(assignedTo)] }
+      );
+      if (!targetUser) throw new AppError('Nhân viên được phân công không tồn tại.', 404);
+      if (targetUser.status !== 'active') throw new AppError('Nhân viên này hiện không hoạt động.', 400);
+      if (targetUser.role !== 'sales') throw new AppError('Chỉ có thể phân công khách hàng cho nhân viên Sales.', 400);
+    }
+
     fields.push('assigned_to = ?');
     values.push(assignedTo || null);
   }
@@ -487,7 +503,7 @@ const listIndustries = async () => {
 const listSalesUsers = async () => {
   const [rows] = await sequelize.query(
     `SELECT id, full_name, email FROM users
-     WHERE role IN ('admin','sales','manager') AND status = 'active'
+     WHERE role = 'sales' AND status = 'active'
      ORDER BY full_name ASC`
   );
   return rows;

@@ -16,13 +16,16 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
-import solutionsService from '../../services/solutionsService';
+import customerService from '../../services/customerService';
+import { useAuth } from '../../store/authContext';
 
 const CustomerFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { currentCustomer, loading } = useAppSelector((state) => state.customers);
+  const { user } = useAuth();
+  const isManager = user?.role === 'admin' || user?.role === 'manager';
 
   const isEditMode = !!id;
 
@@ -37,12 +40,14 @@ const CustomerFormPage = () => {
     address: '',
     website: '',
     status: 'lead',
+    assigned_to: '',
     notes: '',
   });
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [industries, setIndustries] = useState([]);
+  const [salesUsers, setSalesUsers] = useState([]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -55,16 +60,23 @@ const CustomerFormPage = () => {
   }, [dispatch, id, isEditMode]);
 
   useEffect(() => {
-    const fetchIndustries = async () => {
+    const fetchLookups = async () => {
       try {
-        const data = await solutionsService.getIndustries();
-        setIndustries(data || []);
+        const fetchPromises = [customerService.getIndustries()];
+        // Luôn fetch sales users nếu user đã login (để tránh timing issues)
+        if (user) {
+          fetchPromises.push(customerService.getSalesUsers());
+        }
+        const results = await Promise.all(fetchPromises);
+
+        setIndustries(results[0] || []);
+        if (results[1]) setSalesUsers(results[1] || []);
       } catch (error) {
-        console.error('Lỗi khi tải danh sách ngành nghề:', error);
+        console.error('Lỗi khi tải danh sách danh mục:', error);
       }
     };
-    fetchIndustries();
-  }, []);
+    fetchLookups();
+  }, [user]);
 
   useEffect(() => {
     if (isEditMode && currentCustomer) {
@@ -79,6 +91,7 @@ const CustomerFormPage = () => {
         address: currentCustomer.address || '',
         website: currentCustomer.website || '',
         status: currentCustomer.status || 'lead',
+        assigned_to: currentCustomer.assigned_to || '',
         notes: currentCustomer.notes || '',
       });
     }
@@ -203,7 +216,6 @@ const CustomerFormPage = () => {
                     onChange={handleChange}
                     error={errors.company_name}
                     required
-                    placeholder="VD: Công ty TNHH ABC"
                     className="!rounded-none !border-gray-300"
                   />
                 </div>
@@ -215,7 +227,6 @@ const CustomerFormPage = () => {
                   onChange={handleChange}
                   error={errors.tax_code}
                   required
-                  placeholder="VD: 0123456789"
                   className="!rounded-none !border-gray-300"
                 />
 
@@ -359,6 +370,42 @@ const CustomerFormPage = () => {
                 <p className="text-xs text-gray-500 mt-3 leading-relaxed italic">
                   * Trạng thái sẽ được tự động cập nhật khi có hợp đồng hoặc thay đổi từ hệ thống.
                 </p>
+              </div>
+            </Card>
+
+            {/* Assignment Card */}
+            <Card
+              title={<span className="text-xl font-bold text-dark-900">Phân công</span>}
+              className="!rounded-none !shadow-none !border-gray-200"
+            >
+              <div className="p-2">
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  Nhân viên phụ trách
+                </label>
+                {isManager ? (
+                  <select
+                    name="assigned_to"
+                    value={formData.assigned_to}
+                    onChange={handleChange}
+                    className="w-full h-[42px] px-3 border border-gray-300 text-dark-900 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white rounded-none"
+                  >
+                    <option value="">-- Chọn nhân viên Sales --</option>
+                    {salesUsers.map((u) => (
+                      <option key={u.id} value={u.id}>{u.full_name}</option>
+                    ))}
+                  </select>
+                ) : isEditMode ? (
+                  <Input
+                    value={currentCustomer?.assigned_to_name || 'Chưa phân công'}
+                    disabled
+                    className="!rounded-none !border-gray-300 !bg-gray-100"
+                  />
+                ) : (
+                  <div className="bg-gray-100 p-3 border border-gray-200 rounded-none">
+                    <p className="text-dark-900 font-medium">{user?.full_name}</p>
+                    <p className="text-xs text-gray-500 italic">Hệ thống sẽ tự động gán cho bạn khi tạo mới.</p>
+                  </div>
+                )}
               </div>
             </Card>
 
