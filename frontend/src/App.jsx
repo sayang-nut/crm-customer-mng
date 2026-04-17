@@ -16,6 +16,7 @@ import { Page403, Page404 } from './pages/auth/ErrorPages';
 
 import UsersPage      from './pages/users/UsersPage';
 import LoginLogsPage  from './pages/users/LoginLogsPage';
+import Profile        from './pages/users/Profile';
 import CustomersPage       from './pages/customers/CustomersPage';
 import CustomerDetailPage  from './pages/customers/CustomerDetailPage';
 import CustomerFormPage    from './pages/customers/CustomerFormPage';
@@ -91,6 +92,7 @@ const AppRoutes = () => (
     {/* Users */}
     <Route path="/users"            element={<WithLayout allowedRoles={['admin','manager']}><UsersPage /></WithLayout>} />
     <Route path="/users/login-logs" element={<WithLayout allowedRoles={['admin']}><LoginLogsPage /></WithLayout>} />
+    <Route path="/profile"          element={<WithLayout><Profile /></WithLayout>} />
 
     {/* Customers */}
     <Route path="/customers"          element={<WithLayout allowedRoles={['admin','manager','sales','cskh']}><CustomersPage /></WithLayout>} />

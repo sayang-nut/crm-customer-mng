@@ -29,6 +29,7 @@ const sequelize    = require('@config/database');
 const { AppError } = require('@middleware/error');
 const logger       = require('@config/logger');
 const { ROLES, CONTRACT_STATUS } = require('@config/constants');
+const notificationService = require('../notifications/notifications.service');
 
 //Helper: lấy contract đầy đủ
 const _getById = async (id) => {
@@ -215,6 +216,22 @@ const createContract = async (data, userId) => {
     }
   );
 
+  // Gửi Notification cho CSKH nếu có
+  if (cskhId) {
+    try {
+      await notificationService.createNotification(
+        Number(cskhId),
+        'contract_assigned',
+        'Phân công phụ trách hợp đồng',
+        `Bạn vừa được phân công làm CSKH cho hợp đồng ${contractNumber}. Vui lòng kiểm tra chi tiết.`,
+        'contract',
+        result
+      );
+    } catch (err) {
+      logger.error(`[NOTIFICATIONS] Failed to notify CSKH ${cskhId} for contract ${result}:`, err.message);
+    }
+  }
+
   logger.info(`[CONTRACTS] Created contract id=${result} no=${contractNumber}`);
   return _getById(result);
 };
@@ -278,7 +295,7 @@ const rejectContract = async (id, reason, userId) => {
 // ─────────────────────────────────────────────────────────────────
 const updateContract = async (id, data, user) => {
   const [[contract]] = await sequelize.query(
-    `SELECT id, assigned_to, status FROM contracts WHERE id = ? LIMIT 1`,
+    `SELECT id, contract_number, assigned_to, cskh_id, status FROM contracts WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!contract) throw new AppError('Hợp đồng không tồn tại.', 404);
@@ -308,12 +325,25 @@ const updateContract = async (id, data, user) => {
     { replacements: [...values, Number(id)] }
   );
 
+  // Kiểm tra nếu Manager phân công lại CSKH thì gửi thông báo
+  if (cskhId !== undefined && Number(cskhId) !== contract.cskh_id && cskhId !== null && cskhId !== '') {
+    try {
+      await notificationService.createNotification(
+        Number(cskhId),
+        'contract_assigned',
+        'Phân công phụ trách hợp đồng',
+        `Bạn vừa được phân công làm CSKH cho hợp đồng ${contract.contract_number}. Vui lòng kiểm tra chi tiết.`,
+        'contract',
+        Number(id)
+      );
+    } catch (err) {
+      logger.error(`[NOTIFICATIONS] Failed to notify CSKH ${cskhId} for contract ${id}:`, err.message);
+    }
+  }
+
   return _getById(id);
 };
-
-// ─────────────────────────────────────────────────────────────────
 // renewContract
-// ─────────────────────────────────────────────────────────────────
 const renewContract = async (contractId, data, userId) => {
   const contract = await _getById(contractId);
 

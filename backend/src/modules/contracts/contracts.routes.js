@@ -80,7 +80,8 @@ router.post('/',
     body('billingCycle').optional().isIn(VALID_CYCLE).withMessage(`billingCycle: ${VALID_CYCLE.join(' | ')}`),
     body('discount').optional().isFloat({ min: 0, max: 100 }).withMessage('discount từ 0–100.'),
     body('assignedTo').optional().isInt({ min: 1 }),
-    
+    body('cskhId').optional({ nullable: true }), // Cho phép truyền cskhId
+
     body('cskhId').optional().isInt({ min: 1 }).withMessage('cskhId không hợp lệ.'),
 
   ],

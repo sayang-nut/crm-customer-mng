@@ -237,16 +237,7 @@ const Header = () => {
                   <span>Thông tin cá nhân</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    navigate('/settings');
-                    setShowUserMenu(false);
-                  }}
-                  className="dropdown-item flex items-center gap-3"
-                >
-                  <Settings className="w-4 h-4 text-gray-500" />
-                  <span>Cài đặt</span>
-                </button>
+                
 
                 <hr className="border-gray-200 mx-4 my-1" />
 

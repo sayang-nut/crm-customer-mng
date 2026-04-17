@@ -212,15 +212,46 @@ const toggleStatus = async (id, status, adminId) => {
 };
 
 /**
- * Nhân viên tự cập nhật profile (fullName, avatar, telegramChatId).
+ * Nhân viên tự cập nhật profile (fullName, avatar, password).
  * Không được đổi role / status qua endpoint này.
  */
-const updateProfile = async (userId, { fullName, avatarUrl }) => {
+const updateProfile = async (userId, { fullName, avatarUrl, currentPassword, newPassword }) => {
   const fields = [];
   const values = [];
 
-  if (fullName      !== undefined) { fields.push('full_name = ?');        values.push(fullName.trim()); }
-  if (avatarUrl     !== undefined) { fields.push('avatar_url = ?');       values.push(avatarUrl); }
+  // Validate current password if changing password
+  if (newPassword) {
+    if (!currentPassword) {
+      throw new AppError('Vui lòng nhập mật khẩu hiện tại.', 400);
+    }
+
+    // Get current user with password hash
+    const [[user]] = await sequelize.query(
+      `SELECT password_hash FROM users WHERE id = ? LIMIT 1`,
+      { replacements: [Number(userId)] }
+    );
+
+    if (!user) throw new AppError('Người dùng không tồn tại.', 404);
+
+    // Verify current password
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValidPassword) {
+      throw new AppError('Mật khẩu hiện tại không đúng.', 400);
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new AppError('Mật khẩu mới phải có ít nhất 6 ký tự.', 400);
+    }
+
+    // Hash new password
+    const newHash = await bcrypt.hash(newPassword, 12);
+    fields.push('password_hash = ?');
+    values.push(newHash);
+  }
+
+  if (fullName !== undefined) { fields.push('full_name = ?'); values.push(fullName.trim()); }
+  if (avatarUrl !== undefined) { fields.push('avatar_url = ?'); values.push(avatarUrl); }
 
   if (fields.length > 0) {
     await sequelize.query(
