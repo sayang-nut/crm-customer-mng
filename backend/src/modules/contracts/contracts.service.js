@@ -8,9 +8,6 @@
  * @requires ../../config/logger            → winston
  * @requires ../../config/constants         → ROLES, CONTRACT_STATUS
  * @requires ../../middleware/error.middleware → AppError
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ – LAYER: SERVICE (Business Logic)
- *
  *   listContracts    – Danh sách + filter + phân trang (role-aware)
  *   getContractById  – Chi tiết kèm renewal history
  *   createContract   – Tạo HĐ, auto-update customer → active
@@ -33,13 +30,13 @@ const { AppError } = require('@middleware/error');
 const logger       = require('@config/logger');
 const { ROLES, CONTRACT_STATUS } = require('@config/constants');
 
-// ─── Helper: lấy contract đầy đủ ────────────────────────────────
+//Helper: lấy contract đầy đủ
 const _getById = async (id) => {
   const [[contract]] = await sequelize.query(
     `SELECT c.id, c.contract_number, c.customer_id, c.solution_id, c.package_id,
             c.billing_cycle, c.start_date, c.end_date,
             c.value, c.discount, c.final_value, c.status,
-            c.notes, c.assigned_to, c.created_by,
+            c.notes, c.assigned_to, c.cskh_id, c.created_by,
             c.warn_30_sent, c.warn_7_sent, c.expired_remind_sent,
             c.attachment_url, c.reject_reason,
             c.created_at, c.updated_at,
@@ -48,6 +45,7 @@ const _getById = async (id) => {
             sp.name AS package_name, sp.level AS package_level,
             sp.price_monthly, sp.price_yearly,
             u.full_name  AS assigned_to_name,
+            cskh.full_name AS cskh_name,
             cb.full_name AS created_by_name,
             DATEDIFF(c.end_date, CURDATE()) AS days_until_expiry
      FROM contracts c
@@ -55,6 +53,7 @@ const _getById = async (id) => {
      JOIN solutions s      ON s.id   = c.solution_id
      JOIN service_packages sp ON sp.id = c.package_id
      JOIN users u          ON u.id   = c.assigned_to
+     LEFT JOIN users cskh  ON cskh.id = c.cskh_id
      LEFT JOIN users cb    ON cb.id  = c.created_by
      WHERE c.id = ? LIMIT 1`,
     { replacements: [Number(id)] }
@@ -90,9 +89,7 @@ const _applyRoleFilter = (user, conds, params) => {
   // CSKH, Manager, Admin: xem tất cả
 };
 
-// ─────────────────────────────────────────────────────────────────
 // listContracts
-// ─────────────────────────────────────────────────────────────────
 const listContracts = async (user, {
   page = 1, limit = 20,
   status, customerId, assignedTo, expiringSoon, search,
@@ -133,12 +130,14 @@ const listContracts = async (user, {
             s.name  AS solution_name,
             sp.name AS package_name, sp.level AS package_level,
             u.full_name AS assigned_to_name, c.assigned_to,
+            cskh.full_name AS cskh_name, c.cskh_id,
             DATEDIFF(c.end_date, CURDATE()) AS days_until_expiry
      FROM contracts c
      JOIN customers cu     ON cu.id  = c.customer_id
      JOIN solutions s      ON s.id   = c.solution_id
      JOIN service_packages sp ON sp.id = c.package_id
      JOIN users u          ON u.id   = c.assigned_to
+     LEFT JOIN users cskh  ON cskh.id = c.cskh_id
      WHERE ${where}
      ORDER BY c.end_date ASC
      LIMIT ? OFFSET ?`,
@@ -173,7 +172,7 @@ const getContractById = async (id, user) => {
 const createContract = async (data, userId) => {
   const {
     contractNumber, customerId, solutionId, packageId, billingCycle, 
-    startDate, endDate, value, discount, notes, assignedTo, attachmentUrl
+    startDate, endDate, value, discount, notes, assignedTo, cskhId, attachmentUrl
   } = data;
 
   // Số HĐ unique
@@ -203,15 +202,15 @@ const createContract = async (data, userId) => {
     `INSERT INTO contracts
        (contract_number, customer_id, solution_id, package_id, billing_cycle,
         start_date, end_date, value, discount, final_value,
-        status, assigned_to, notes, created_by, attachment_url)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+        status, assigned_to, cskh_id, notes, created_by, attachment_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
     {
       replacements: [
         contractNumber.trim(), Number(customerId), Number(solutionId),
         Number(packageId), billingCycle || 'yearly',
         startDate, endDate,
         Number(value), disc, finalValue,
-        Number(assignee), notes || null, userId, attachmentUrl || null
+        Number(assignee), cskhId ? Number(cskhId) : null, notes || null, userId, attachmentUrl || null
       ],
     }
   );
@@ -292,11 +291,14 @@ const updateContract = async (id, data, user) => {
   }
 
   const fields = [], values = [];
-  const { notes, assignedTo } = data;
+  const { notes, assignedTo, cskhId } = data;
 
   if (notes      !== undefined) { fields.push('notes = ?');       values.push(notes); }
   if (assignedTo !== undefined && [ROLES.ADMIN, ROLES.MANAGER].includes(user.role)) {
     fields.push('assigned_to = ?'); values.push(Number(assignedTo));
+  }
+  if (cskhId !== undefined) {
+    fields.push('cskh_id = ?'); values.push(cskhId ? Number(cskhId) : null);
   }
 
   if (fields.length === 0) throw new AppError('Không có trường nào để cập nhật.', 400);
@@ -406,9 +408,7 @@ const cancelContract = async (contractId, reason, userId) => {
   logger.info(`[CONTRACTS] Cancelled contract ${contractId} by user ${userId}`);
 };
 
-// ─────────────────────────────────────────────────────────────────
 // getStats  – Thống kê nhanh cho dashboard
-// ─────────────────────────────────────────────────────────────────
 const getStats = async (user) => {
   const conds = ['1=1'], params = [];
   _applyRoleFilter(user, conds, params);

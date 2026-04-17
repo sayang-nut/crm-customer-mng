@@ -1,6 +1,5 @@
 /**
  * @file     src/components/layout/Header.jsx
- * @theme    WHITE PLAIN - Sync LoginPage
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';

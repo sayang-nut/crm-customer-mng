@@ -20,9 +20,7 @@
 const sequelize = require('../../config/database');
 const logger   = require('../../config/logger');
 
-// ─────────────────────────────────────────────────────────────────
 // createNotification
-// ─────────────────────────────────────────────────────────────────
 const createNotification = async (userId, type, title, message, refType = null, refId = null) => {
   const [result] = await sequelize.query(
     `INSERT INTO notifications (user_id, type, title, message, ref_type, ref_id)
@@ -33,9 +31,7 @@ const createNotification = async (userId, type, title, message, refType = null, 
   return { id: result.insertId };
 };
 
-// ─────────────────────────────────────────────────────────────────
 // notifyUsers – Gửi cho danh sách userId (dùng trong cron)
-// ─────────────────────────────────────────────────────────────────
 const notifyUsers = async (userIds, type, title, message, refType = null, refId = null) => {
   const results = [];
   for (const uid of userIds) {
@@ -49,9 +45,7 @@ const notifyUsers = async (userIds, type, title, message, refType = null, refId 
   return results;
 };
 
-// ─────────────────────────────────────────────────────────────────
 // listNotifications
-// ─────────────────────────────────────────────────────────────────
 const listNotifications = async (userId, { page = 1, limit = 20, unreadOnly } = {}) => {
   const pageNum  = Math.max(1, parseInt(page, 10));
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
@@ -87,9 +81,7 @@ const listNotifications = async (userId, { page = 1, limit = 20, unreadOnly } = 
   };
 };
 
-// ─────────────────────────────────────────────────────────────────
 // markRead / markAllRead / getUnreadCount
-// ─────────────────────────────────────────────────────────────────
 const markRead = async (notificationId, userId) => {
   await sequelize.query(
     `UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?`,

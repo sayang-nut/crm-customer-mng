@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowLeft, CheckCircle, XCircle, FileText,
-  Building2, Package, Calendar, DollarSign, User
+  Building2, Package, Calendar, DollarSign, User, Edit2, Save, X
 } from 'lucide-react';
 import { useAuth } from '../../store/authContext';
 import contractsService from '../../services/contractsService';
+import api from '../../services/api';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -58,20 +59,39 @@ const ContractDetailPage = ({ id, onBack, onUpdated }) => {
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
 
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        setLoading(true);
-        const data = await contractsService.getById(id);
-        setContract(data);
-      } catch (err) {
-        setError('Không thể tải chi tiết hợp đồng.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchDetail();
+  // State phục vụ phân công CSKH inline
+  const [cskhUsers, setCskhUsers] = useState([]);
+  const [isEditingCskh, setIsEditingCskh] = useState(false);
+  const [selectedCskhId, setSelectedCskhId] = useState('');
+  const [isSavingCskh, setIsSavingCskh] = useState(false);
+
+  const fetchDetail = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await contractsService.getById(id);
+      setContract(data);
+      setSelectedCskhId(data.cskh_id || '');
+    } catch (err) {
+      setError('Không thể tải chi tiết hợp đồng.');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  useEffect(() => {
+    if (id) fetchDetail();
+  }, [id, fetchDetail]);
+
+  useEffect(() => {
+    if (isManager) {
+      api.get('/api/users', { params: { role: 'cskh', status: 'active', limit: 100 } })
+        .then(res => {
+          const payload = res.data?.data || res.data;
+          setCskhUsers(Array.isArray(payload) ? payload : (payload?.data || []));
+        })
+        .catch(err => console.error('Không tải được danh sách CSKH', err));
+    }
+  }, [isManager]);
 
   const handleApprove = async () => {
     if (!window.confirm('Xác nhận duyệt hợp đồng này?')) return;
@@ -94,6 +114,20 @@ const ContractDetailPage = ({ id, onBack, onUpdated }) => {
       onBack();
     } catch (err) {
       alert(err.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const handleUpdateCskh = async () => {
+    try {
+      setIsSavingCskh(true);
+      await api.put(`/api/contracts/${id}`, { cskhId: selectedCskhId || null });
+      setIsEditingCskh(false);
+      await fetchDetail(); // Tải lại chi tiết hợp đồng
+      if (onUpdated) onUpdated(); // Thông báo ra danh sách bên ngoài để làm mới data
+    } catch (err) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi phân công CSKH');
+    } finally {
+      setIsSavingCskh(false);
     }
   };
 
@@ -295,11 +329,52 @@ const ContractDetailPage = ({ id, onBack, onUpdated }) => {
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Sales phụ trách
+                  Nhân sự phụ trách
                 </h3>
-                <div className="flex items-center gap-2 text-gray-900 font-medium">
-                  <User className="w-4 h-4 text-gray-400" />
-                  {contract.assigned_to_name || 'Chưa phân công'}
+                <div className="space-y-3 mt-3">
+                  <div className="flex items-center gap-2 text-gray-900 font-medium">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500 w-12 text-sm">Sales:</span>
+                    {contract.assigned_to_name || 'Chưa phân công'}
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-900 font-medium">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-500 w-12 text-sm">CSKH:</span>
+                    {isEditingCskh ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <select
+                          className="flex-1 px-2 py-1 border border-gray-300 text-sm focus:outline-none focus:border-blue-500"
+                          value={selectedCskhId}
+                          onChange={(e) => setSelectedCskhId(e.target.value)}
+                          disabled={isSavingCskh}
+                        >
+                          <option value="">-- Chọn CSKH --</option>
+                          {cskhUsers.map(u => (
+                            <option key={u.id} value={u.id}>{u.full_name || u.fullName}</option>
+                          ))}
+                        </select>
+                        <button onClick={handleUpdateCskh} disabled={isSavingCskh} className="text-green-600 hover:text-green-800" title="Lưu">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => { setIsEditingCskh(false); setSelectedCskhId(contract.cskh_id || ''); }} disabled={isSavingCskh} className="text-gray-400 hover:text-red-600" title="Hủy">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between flex-1 group">
+                        <span>{contract.cskh_name || 'Chưa chọn'}</span>
+                        {isManager && contract.status !== 'cancelled' && (
+                          <button
+                            onClick={() => setIsEditingCskh(true)}
+                            className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Phân công lại CSKH"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               

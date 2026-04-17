@@ -14,6 +14,7 @@ import { useAuth } from '../../store/authContext';
 import contractsService from '../../services/contractsService';
 import customerService from '../../services/customerService';
 import solutionsService from '../../services/solutionsService';
+import api from '../../services/api';
 
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -25,10 +26,12 @@ const fmtVND = (n) =>
 
 const ContractAddForm = ({ onCancel, onSaved }) => {
   const { user: currentUser } = useAuth();
+  const isManager = ['admin', 'manager'].includes(currentUser?.role);
 
   const [customers, setCustomers] = useState([]);
   const [solutions, setSolutions] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [cskhUsers, setCskhUsers] = useState([]);
 
   const [loadingData, setLoadingData] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +50,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
     discount: 0,
     finalValue: 0,
     assignedTo: currentUser?.id || '',
+    cskhId: '',
     notes: '',
   });
 
@@ -69,15 +73,21 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
     const fetchMasterData = async () => {
       try {
         setLoadingData(true);
-        const [custRes, solRes, pkgRes] = await Promise.all([
+        const [custRes, solRes, pkgRes, cskhRes] = await Promise.all([
           customerService.getCustomers({ page: 1, limit: 100 }),
           solutionsService.getSolutions(),
           solutionsService.getPackages(),
+          isManager 
+            ? api.get('/api/users', { params: { role: 'cskh', status: 'active', limit: 100 } }).catch(() => ({ data: { data: [] } }))
+            : Promise.resolve({ data: { data: [] } })
         ]);
 
         setCustomers(custRes?.data?.data || custRes?.data || custRes || []);
         setSolutions(solRes?.data || solRes || []);
         setPackages(pkgRes?.data || pkgRes || []);
+        
+        const cskhPayload = cskhRes?.data?.data || cskhRes?.data;
+        setCskhUsers(Array.isArray(cskhPayload) ? cskhPayload : (cskhPayload?.data || []));
       } catch (err) {
         setError('Không thể tải dữ liệu danh mục. Vui lòng thử lại.');
       } finally {
@@ -341,7 +351,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2 ">
                   Ngày kết thúc
                   <Calculator className="w-4 h-4 text-blue-600" />
                 </label>
@@ -395,7 +405,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-500 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-gray-500 mb-2">
                   Giá trị thu thực
                   <DollarSign className="w-4 h-4 text-green-600" />
                 </label>
@@ -410,7 +420,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border border-gray-200 !rounded-none !shadow-none">
             <div className="p-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 ">
                 <UploadCloud className="w-4 h-4 text-blue-600" />
                 Bản cứng hợp đồng (Bắt buộc)
               </label>
@@ -434,11 +444,34 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Sales phụ trách hợp đồng
               </label>
-              <div className="w-full px-4 py-3 border border-gray-300 bg-gray-50 text-gray-900 cursor-not-allowed flex items-center gap-2">
+              <div className="w-full px-4 py-3 border border-gray-300 bg-gray-50 text-gray-900 cursor-not-allowed flex items-center gap-2 mb-4">
                 <User className="w-4 h-4 text-gray-500" />
                 <span className="font-medium">{currentUser?.fullName}</span>
                 <span className="text-gray-500">({currentUser?.email})</span>
               </div>
+
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                CSKH phụ trách (Tùy chọn)
+              </label>
+              {isManager ? (
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={form.cskhId}
+                  onChange={(e) => setField('cskhId', e.target.value)}
+                >
+                  <option value="">-- Chọn nhân viên CSKH --</option>
+                  {cskhUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name || u.fullName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="w-full px-4 py-3 border border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" />
+                  <span className="italic">Sẽ được Quản lý phân công sau</span>
+                </div>
+              )}
             </div>
           </Card>
 

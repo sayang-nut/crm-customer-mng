@@ -1,14 +1,11 @@
 'use strict';
 
 /**
- * @file     backend/src/modules/revenues/revenues.service.js
  * @location backend/src/modules/revenues/revenues.service.js
- * ─────────────────────────────────────────────────────────────────
  * @requires ../../config/database            → sequelize
  * @requires ../../config/logger              → winston
  * @requires ../../config/constants           → ROLES, PAYMENT_METHOD
  * @requires ../../middleware/error.middleware → AppError
- * ─────────────────────────────────────────────────────────────────
  * VAI TRÒ – LAYER: SERVICE (Business Logic)  
  *
  *   listRevenues    – Danh sách bản ghi thanh toán (role-aware)
@@ -18,7 +15,6 @@
  *   deleteRevenue   – Xóa bản ghi (Admin only)
  *   getSummary      – Tổng hợp theo tháng/năm, theo giải pháp
  *   getStats        – Thống kê nhanh: tháng này, năm này, tổng
- * ─────────────────────────────────────────────────────────────────
  */
 require('module-alias/register');
 const sequelize    = require('@config/database');

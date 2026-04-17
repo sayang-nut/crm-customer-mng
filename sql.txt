@@ -336,7 +336,7 @@ CREATE TABLE IF NOT EXISTS `contract_renewal_history` (
 
 -- ----------------------------------------------------------------
 -- 12. tickets
---     Yêu cầu hỗ trợ từ khách hàng (Đã tinh gọn, loại bỏ tính năng Chat/Comment).
+--     Yêu cầu hỗ trợ từ khách hàng 
 --     Vòng đời: open → processing → resolved → closed
 -- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `tickets` (
@@ -476,3 +476,11 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- ================================================================
 -- END OF SCHEMA
 -- ================================================================
+-- Thêm cột cskh_id nằm ngay sau cột assigned_to
+ALTER TABLE `contracts`
+ADD COLUMN `cskh_id` INT UNSIGNED NULL COMMENT 'FK → users.id (CSKH phụ trách)' AFTER `assigned_to`;
+
+-- Thêm khoá ngoại đảm bảo tính toàn vẹn dữ liệu
+ALTER TABLE `contracts`
+ADD CONSTRAINT `fk_cont_cskh`
+FOREIGN KEY (`cskh_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
