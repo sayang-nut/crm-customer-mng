@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, FileText } from 'lucide-react';
 import contractsService from '../../services/contractsService';
 import ContractAddForm from './ContractAddForm';
 import ContractDetailPage from './ContractDetailPage';
+import ContractRenewForm from './ContractRenewForm';
 
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -205,6 +206,23 @@ const ContractsPage = () => {
             id={modal.id}
             onBack={() => setModal({ type: null, id: null, contract: null })}
             onUpdated={fetchData}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (modal.type === 'renew' && modal.contract) {
+    return (
+      <div className="bg-white min-h-screen p-1">
+        <div className="max-w-7xl mx-auto px-6 py-10">
+          <ContractRenewForm
+            contract={modal.contract}
+            onCancel={() => setModal({ type: null, id: null, contract: null })}
+            onSaved={() => {
+              setModal({ type: null, id: null, contract: null });
+              fetchData();
+            }}
           />
         </div>
       </div>
