@@ -51,8 +51,6 @@ CREATE TABLE IF NOT EXISTS `login_logs` (
                  'success',
                  'failed'
                )               NOT NULL                    COMMENT 'Kết quả đăng nhập',
-  `ip_address` VARCHAR(50)     NULL                        COMMENT 'IPv4/IPv6 của client',
-  `user_agent` VARCHAR(500)    NULL                        COMMENT 'Browser / device info',
   `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (`id`),
@@ -480,7 +478,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 ALTER TABLE `contracts`
 ADD COLUMN `cskh_id` INT UNSIGNED NULL COMMENT 'FK → users.id (CSKH phụ trách)' AFTER `assigned_to`;
 
--- Thêm khoá ngoại đảm bảo tính toàn vẹn dữ liệu
+-- Thêm khoá ngoại đảm bảo tính toàn vẹn dữ liệu  
 ALTER TABLE `contracts`
 ADD CONSTRAINT `fk_cont_cskh`
 FOREIGN KEY (`cskh_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;

@@ -17,10 +17,8 @@ const authService = require('./service');
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const ipAddress = req.ip || req.socket?.remoteAddress;
-    const userAgent = req.headers['user-agent'];
 
-    const result = await authService.login(email, password, ipAddress, userAgent);
+    const result = await authService.login(email, password);
 
     res.json({ success: true, data: result });
   } catch (err) {

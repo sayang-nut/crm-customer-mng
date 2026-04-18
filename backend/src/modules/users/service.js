@@ -283,7 +283,7 @@ const getLoginLogs = async (userId, { page = 1, limit = 50 } = {}) => {
 
   const [logs] = await sequelize.query(
     `SELECT ll.id, ll.user_id, u.full_name, u.email, u.role,
-            ll.status, ll.ip_address, ll.user_agent, ll.created_at
+            ll.status, ll.created_at
      FROM login_logs ll
      JOIN users u ON u.id = ll.user_id
      WHERE ${cond}

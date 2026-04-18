@@ -51,12 +51,12 @@ const generateTokenPair = (user) => {
 };
 
 /** Ghi login_log – lỗi không crash request */
-const writeLoginLog = async (userId, status, ip, ua) => {
+const writeLoginLog = async (userId, status) => {
   try {
     await sequelize.query(
-      `INSERT INTO login_logs (user_id, status, ip_address, user_agent, created_at)
-       VALUES (?, ?, ?, ?, NOW())`,
-      { replacements: [userId, status, ip ?? null, ua ?? null] }
+      `INSERT INTO login_logs (user_id, status, created_at)
+       VALUES (?, ?, NOW())`,
+      { replacements: [userId, status] }
     );
   } catch (err) {
     logger.error('writeLoginLog failed:', err.message);
@@ -71,7 +71,7 @@ const writeLoginLog = async (userId, status, ip, ua) => {
  * Đăng nhập – kiểm tra email → status → password.
  * Lưu refresh token vào DB, cập nhật last_login_at, ghi log.
  */
-const login = async (email, password, ipAddress, userAgent) => {
+const login = async (email, password) => {
   const [[user]] = await sequelize.query(
     `SELECT id, full_name, email, password_hash, role, status, avatar_url
      FROM users WHERE email = ? LIMIT 1`,
@@ -92,7 +92,7 @@ const login = async (email, password, ipAddress, userAgent) => {
 
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
-    await writeLoginLog(user.id, 'failed', ipAddress, userAgent);
+    await writeLoginLog(user.id, 'failed');
     throw new AppError('Email hoặc mật khẩu không đúng.', 401);
   }
 
@@ -103,7 +103,7 @@ const login = async (email, password, ipAddress, userAgent) => {
     { replacements: [refreshToken, user.id] }
   );
 
-  await writeLoginLog(user.id, 'success', ipAddress, userAgent);
+  await writeLoginLog(user.id, 'success');
 
   return {
     accessToken,

@@ -65,7 +65,6 @@ const LoginLogsPage = ({ userId = null }) => {
       const params = {
         page,
         limit: LIMIT,
-        ...(targetUserId ? { userId: targetUserId } : {}),
         ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
         ...(filter ? { status: filter } : {}),
       };
@@ -208,7 +207,7 @@ const LoginLogsPage = ({ userId = null }) => {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    {['Nhân viên', 'Vai trò', 'Kết quả', 'IP Address', 'Thời gian'].map((h) => (
+                    {['Nhân viên', 'Vai trò', 'Kết quả', 'Thời gian'].map((h) => (
                       <th
                         key={h}
                         className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
@@ -243,10 +242,6 @@ const LoginLogsPage = ({ userId = null }) => {
 
                       <td className="px-6 py-4">
                         {getStatusBadge(log.status)}
-                      </td>
-
-                      <td className="px-6 py-4 text-sm text-gray-700 font-mono">
-                        {log.ip_address || '—'}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-700 font-mono">
