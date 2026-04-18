@@ -15,6 +15,8 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
+import Input from '../../components/common/Input';
+import customerService from '../../services/customerService';
 import ConfirmDeleteModal from '../../components/common/ConfirmDeleteModal';
 
 const CustomerDetailPage = () => {
@@ -24,9 +26,18 @@ const CustomerDetailPage = () => {
   const { currentCustomer, loading } = useAppSelector((state) => state.customers);
   const { user } = useAuth();
   const canManage = user?.role === 'admin' || user?.role === 'manager';
+  const canAddContact = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'sales';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [addingContact, setAddingContact] = useState(false);
+  const [newContact, setNewContact] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    notes: '',
+  });
 
   useEffect(() => {
     dispatch(fetchCustomerById(id));
@@ -40,6 +51,29 @@ const CustomerDetailPage = () => {
       navigate('/customers');
     } catch (error) {
       toast.error(error.message || 'Có lỗi xảy ra khi xóa khách hàng');
+    }
+  };
+
+  const handleAddContact = async (e) => {
+    e.preventDefault();
+    if (!newContact.fullName || !newContact.phone) {
+      toast.error('Vui lòng nhập tên và số điện thoại');
+      return;
+    }
+    setAddingContact(true);
+    try {
+      await customerService.addContact(id, {
+        ...newContact,
+        isPrimary: false
+      });
+      toast.success('Thêm người liên hệ thành công');
+      setShowAddContact(false);
+      setNewContact({ fullName: '', phone: '', email: '', notes: '' });
+      dispatch(fetchCustomerById(id));
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Có lỗi xảy ra khi thêm người liên hệ');
+    } finally {
+      setAddingContact(false);
     }
   };
 
@@ -97,6 +131,8 @@ const CustomerDetailPage = () => {
     currentCustomer.phone ||
     primaryContact.phone ||
     'Chưa cập nhật';
+    
+  const secondaryContacts = currentCustomer.contacts?.filter((ct) => ct.id !== primaryContact.id) || [];
 
   // Dữ liệu thật từ Backend
   const contracts = currentCustomer.contracts || [];
@@ -321,6 +357,106 @@ const CustomerDetailPage = () => {
                       <p className="text-lg text-gray-400">Chưa cập nhật</p>
                     )}
                   </div>
+                </div>
+              </Card>
+
+              <Card 
+                title={
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl font-bold text-dark-900">Người liên hệ khác</span>
+                    {canAddContact && (
+                      <button 
+                        onClick={() => setShowAddContact(!showAddContact)}
+                        className="flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <span className="text-lg leading-none">+</span> Thêm người
+                      </button>
+                    )}
+                  </div>
+                } 
+                className="shadow-sm"
+              >
+                <div className="space-y-4">
+                  {showAddContact && (
+                    <form onSubmit={handleAddContact} className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <Input
+                          label="Họ và tên *"
+                          value={newContact.fullName}
+                          onChange={(e) => setNewContact({...newContact, fullName: e.target.value})}
+                          required
+                          placeholder="Nhập họ và tên"
+                        />
+                        <Input
+                          label="Số điện thoại *"
+                          value={newContact.phone}
+                          onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
+                          required
+                          placeholder="Nhập số điện thoại"
+                        />
+                        <Input
+                          label="Email"
+                          type="email"
+                          value={newContact.email}
+                          onChange={(e) => setNewContact({...newContact, email: e.target.value})}
+                          placeholder="Nhập email (không bắt buộc)"
+                        />
+                        <Input
+                          label="Chức vụ/Ghi chú"
+                          value={newContact.notes}
+                          onChange={(e) => setNewContact({...newContact, notes: e.target.value})}
+                          placeholder="Nhập chức vụ hoặc ghi chú"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          onClick={() => setShowAddContact(false)}
+                          disabled={addingContact}
+                        >
+                          Hủy
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          variant="primary"
+                          disabled={addingContact}
+                        >
+                          {addingContact ? 'Đang lưu...' : 'Lưu'}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+
+                  {secondaryContacts.length === 0 && !showAddContact ? (
+                    <p className="text-gray-500 italic text-center py-4">Chưa có người liên hệ khác.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {secondaryContacts.map(contact => (
+                        <div key={contact.id} className="p-4 border border-gray-200 rounded-xl hover:border-primary-300 transition-colors bg-white">
+                          <h4 className="font-bold text-dark-900 mb-1 flex items-center gap-2">
+                            <User className="w-4 h-4 text-gray-500" />
+                            {contact.full_name}
+                          </h4>
+                          {contact.notes && <p className="text-sm text-gray-600 mb-2">{contact.notes}</p>}
+                          <div className="space-y-1.5 mt-3">
+                            {contact.phone && (
+                              <a href={`tel:${contact.phone}`} className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-2">
+                                <Phone className="w-3.5 h-3.5" />
+                                {contact.phone}
+                              </a>
+                            )}
+                            {contact.email && (
+                              <a href={`mailto:${contact.email}`} className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-2">
+                                <Mail className="w-3.5 h-3.5" />
+                                {contact.email}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Card>
 
