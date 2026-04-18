@@ -246,37 +246,31 @@ const createCustomer = async (data, userId) => {
 // updateCustomer
 // ─────────────────────────────────────────────────────────────────
 const updateCustomer = async (id, data, user) => {
+  // Chỉ Admin/Manager mới có quyền sửa
+  if (![ROLES.ADMIN, ROLES.MANAGER].includes(user.role)) {
+    throw new AppError('Bạn không có quyền chỉnh sửa thông tin khách hàng.', 403);
+  }
+
   const [[existing]] = await sequelize.query(
     `SELECT id, assigned_to FROM customers WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!existing) throw new AppError('Khách hàng không tồn tại.', 404);
 
-  // Sales chỉ sửa KH của mình
-  if (user.role === ROLES.SALES && existing.assigned_to !== user.id) {
-    throw new AppError('Bạn không có quyền chỉnh sửa khách hàng này.', 403);
-  }
-
   const { companyName, taxCode, address, industryId, website, source, assignedTo, notes } = data;
   const fields = [];
   const values = [];
 
   if (companyName !== undefined) { fields.push('company_name = ?'); values.push(companyName.trim()); }
-  if (taxCode     !== undefined) { fields.push('tax_code = ?');     values.push(taxCode?.trim() || null); }
-  if (address     !== undefined) { fields.push('address = ?');      values.push(address); }
-  if (industryId  !== undefined) { fields.push('industry_id = ?');  values.push(industryId || null); }
-  if (website     !== undefined) { fields.push('website = ?');      values.push(website); }
-  if (source      !== undefined) { fields.push('source = ?');       values.push(source); }
-  if (notes       !== undefined) { fields.push('notes = ?');        values.push(notes); }
+  if (taxCode !== undefined) { fields.push('tax_code = ?'); values.push(taxCode?.trim() || null); }
+  if (address !== undefined) { fields.push('address = ?'); values.push(address); }
+  if (industryId !== undefined) { fields.push('industry_id = ?'); values.push(industryId || null); }
+  if (website !== undefined) { fields.push('website = ?'); values.push(website); }
+  if (source !== undefined) { fields.push('source = ?'); values.push(source); }
+  if (notes !== undefined) { fields.push('notes = ?'); values.push(notes); }
 
   // Xử lý thay đổi người phụ trách (assigned_to)
   if (assignedTo !== undefined && assignedTo != existing.assigned_to) {
-    // 1. Kiểm tra quyền của người đang thao tác
-    if (!['admin', 'manager'].includes(user.role)) {
-      throw new AppError('Bạn không có quyền thay đổi người phụ trách khách hàng.', 403);
-    }
-
-    // 2. Ràng buộc Role nhận (nếu có chọn người mới)
     if (assignedTo) {
       const [[targetUser]] = await sequelize.query(
         `SELECT id, role, status FROM users WHERE id = ? LIMIT 1`,
@@ -385,15 +379,16 @@ const changeStatus = async (id, newStatus, reason, userId) => {
 
 // deleteCustomer
 const deleteCustomer = async (id, user) => {
+  // Chỉ Admin/Manager mới có quyền xóa
+  if (![ROLES.ADMIN, ROLES.MANAGER].includes(user.role)) {
+    throw new AppError('Bạn không có quyền xóa khách hàng này.', 403);
+  }
+
   const [[customer]] = await sequelize.query(
     `SELECT id, assigned_to FROM customers WHERE id = ? LIMIT 1`,
     { replacements: [Number(id)] }
   );
   if (!customer) throw new AppError('Khách hàng không tồn tại.', 404);
-
-  if (user.role === ROLES.SALES && customer.assigned_to !== user.id) {
-    throw new AppError('Bạn không có quyền xóa khách hàng này.', 403);
-  }
 
   await sequelize.query(
     `DELETE FROM customers WHERE id = ?`,

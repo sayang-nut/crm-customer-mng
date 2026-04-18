@@ -51,13 +51,18 @@ const CustomerFormPage = () => {
 
   useEffect(() => {
     if (isEditMode) {
+      if (user && !isManager) {
+        toast.error('Bạn không có quyền chỉnh sửa khách hàng.');
+        navigate(`/customers/${id}`, { replace: true });
+        return;
+      }
       dispatch(fetchCustomerById(id));
     }
 
     return () => {
       dispatch(clearCurrentCustomer());
     };
-  }, [dispatch, id, isEditMode]);
+  }, [dispatch, id, isEditMode, isManager, user, navigate]);
 
   useEffect(() => {
     const fetchLookups = async () => {

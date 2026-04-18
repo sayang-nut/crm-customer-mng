@@ -5,6 +5,7 @@ import {
   Building2, User, Calendar, FileText, Ticket, DollarSign, 
   Clock, CheckCircle, XCircle, AlertCircle,
 } from 'lucide-react';
+import { useAuth } from '../../store/authContext';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   fetchCustomerById, deleteCustomer, clearCurrentCustomer,
@@ -21,6 +22,8 @@ const CustomerDetailPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { currentCustomer, loading } = useAppSelector((state) => state.customers);
+  const { user } = useAuth();
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -144,24 +147,26 @@ const CustomerDetailPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <Button
-              variant="outline"
-              icon={Edit}
-              className="border-gray-300 hover:bg-gray-50 shadow-sm"
-              onClick={() => navigate(`/customers/${id}/edit`)}
-            >
-              Chỉnh sửa
-            </Button>
-            <Button
-              variant="danger"
-              icon={Trash2}
-              className="!bg-red-50 !text-red-700 !border-red-200 hover:!bg-red-100 shadow-sm"
-              onClick={() => setShowDeleteModal(true)}
-            >
-              Xóa
-            </Button>
-          </div>
+          {canManage && (
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Button
+                variant="outline"
+                icon={Edit}
+                className="border-gray-300 hover:bg-gray-50 shadow-sm"
+                onClick={() => navigate(`/customers/${id}/edit`)}
+              >
+                Chỉnh sửa
+              </Button>
+              <Button
+                variant="danger"
+                icon={Trash2}
+                className="!bg-red-50 !text-red-700 !border-red-200 hover:!bg-red-100 shadow-sm"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Xóa
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

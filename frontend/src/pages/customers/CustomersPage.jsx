@@ -18,6 +18,7 @@ import {
   Trash2,
   Eye,
 } from 'lucide-react';
+import { useAuth } from '../../store/authContext';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   fetchCustomers,
@@ -42,6 +43,8 @@ const CustomersPage = () => {
   const { items, pagination, filters, loading } = useAppSelector(
     (state) => state.customers
   );
+  const { user } = useAuth();
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -188,24 +191,28 @@ const CustomersPage = () => {
                 <Eye className="w-4 h-4" />
                 <span>Xem chi tiết</span>
               </button>
-              <button
-                onClick={() => {
-                  navigate(`/customers/${row.id}/edit`);
-                  setActionMenuOpen(null);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                <span>Chỉnh sửa</span>
-              </button>
-              <div className="border-t border-gray-100 my-1" />
-              <button
-                onClick={() => handleDeleteClick(row)}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Xóa</span>
-              </button>
+              {canManage && (
+                <>
+                  <button
+                    onClick={() => {
+                      navigate(`/customers/${row.id}/edit`);
+                      setActionMenuOpen(null);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    onClick={() => handleDeleteClick(row)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Xóa</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
