@@ -203,8 +203,8 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant={priorityCfg.variant} className="!rounded-none px-3 py-1 text-sm font-bold uppercase">{priorityCfg.label}</Badge>
-            <Badge variant={currentStatusCfg.variant} className="!rounded-none px-3 py-1 text-sm font-bold uppercase">{currentStatusCfg.label}</Badge>
+            <Badge variant={priorityCfg.variant} className="px-3 py-1 text-sm font-bold uppercase">{priorityCfg.label}</Badge>
+            <Badge variant={currentStatusCfg.variant} className="px-3 py-1 text-sm font-bold uppercase">{currentStatusCfg.label}</Badge>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* MAIN CONTENT */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <Card className="border border-gray-200 !shadow-none">
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Mô tả vấn đề</h3>
               <div className="whitespace-pre-wrap text-gray-700 bg-gray-50 p-4 border border-gray-100">
@@ -221,7 +221,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
             </div>
           </Card>
 
-          <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <Card className="border border-gray-200 !shadow-none">
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-600" /> Ghi chú cách giải quyết (SLA)
@@ -240,7 +240,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
                     className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y"
                   />
                   <div className="flex justify-end">
-                    <Button onClick={handleSaveNotes} variant="primary" className="!rounded-none px-6">
+                    <Button onClick={handleSaveNotes} variant="primary" className="px-6">
                       <Save className="w-4 h-4 mr-2" /> Lưu ghi chú
                     </Button>
                   </div>
@@ -283,7 +283,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
         <div className="lg:col-span-1 space-y-6">
           {/* STATUS CHANGE */}
           {showStatusChange && (
-            <Card className="border border-gray-200 !rounded-none !shadow-none">
+            <Card className="border border-gray-200 !shadow-none">
               <div className="p-6">
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Xử lý Ticket</h3>
                 {ticket.status === 'open' ? (
@@ -294,7 +294,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
                   <Button
                     onClick={() => handleChangeStatus(currentStatusCfg.next)}
                     variant="primary"
-                    className="w-full !rounded-none justify-center h-12 font-bold"
+                    className="w-full justify-center h-12 font-bold"
                   >
                     {currentStatusCfg.nextLabel}
                   </Button>
@@ -308,7 +308,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
           )}
 
           {/* ASSIGNMENT */}
-          <Card className="border border-gray-200 !rounded-none !shadow-none">
+          <Card className="border border-gray-200 !shadow-none">
             <div className="p-6">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Phân công cho</h3>
               {isAdminOrManager && !isClosed ? (
@@ -316,7 +316,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
                   <select
                     value={selectedAssignee}
                     onChange={(e) => setSelectedAssignee(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 !rounded-none"
+                    className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">-- Chọn kỹ thuật viên --</option>
                     {techUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || u.fullName}</option>)}
@@ -324,7 +324,7 @@ const TicketDetailView = ({ id, onBack, onRefresh }) => {
                   <Button
                     onClick={handleSaveAssign}
                     variant="primary"
-                    className="w-full !rounded-none justify-center font-bold"
+                    className="w-full justify-center font-bold"
                     disabled={selectedAssignee == (ticket.assigned_to || '')}
                   >
                     Lưu phân công

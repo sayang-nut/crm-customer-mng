@@ -148,7 +148,7 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
           Gia hạn hợp đồng
         </h1>
         <p className="text-lg text-gray-600">
-          Khách hàng: <strong className="text-gray-900">{fullContract.company_name}</strong> — Số HĐ: <strong className="text-blue-600">{fullContract.contract_number}</strong>
+          Khách hàng: <strong className="text-gray-900">{fullContract.company_name}</strong> — Số HĐ: <strong className="text-primary-600">{fullContract.contract_number}</strong>
         </p>
       </div>
 
@@ -162,7 +162,7 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
+              <Calendar className="w-5 h-5 text-primary-600" />
               Thời hạn gia hạn
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -181,7 +181,7 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
                 <input
                   type="date"
                   required
-                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   value={form.newEndDate}
                   onChange={(e) => setField('newEndDate', e.target.value)}
                 />
@@ -193,7 +193,7 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
+              <Package className="w-5 h-5 text-primary-600" />
               Gói dịch vụ
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -211,7 +211,7 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
                 </label>
                 <select
                   required
-                  className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   value={form.newPackageId}
                   onChange={(e) => setField('newPackageId', e.target.value)}
                 >
@@ -229,17 +229,17 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-blue-600" />
+              <DollarSign className="w-5 h-5 text-primary-600" />
               Tài chính chu kỳ mới
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-6 border border-gray-200">
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-2">Giá trị gốc (VNĐ)</label>
-                <input type="number" required className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent" value={form.newValue} onChange={(e) => setField('newValue', e.target.value)} />
+                <input type="number" required className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-primary-500 bg-transparent" value={form.newValue} onChange={(e) => setField('newValue', e.target.value)} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-2">Chiết khấu (%)</label>
-                <input type="number" min="0" max="100" className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-blue-500 bg-transparent" value={form.discount} onChange={(e) => setField('discount', e.target.value)} />
+                <input type="number" min="0" max="100" className="w-full px-0 py-2 text-2xl font-bold text-gray-900 border-0 border-b border-gray-300 focus:outline-none focus:border-primary-500 bg-transparent" value={form.discount} onChange={(e) => setField('discount', e.target.value)} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-2">Giá trị thu thực</label>
@@ -254,13 +254,13 @@ const ContractRenewForm = ({ contract, onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Ghi chú gia hạn</label>
-            <textarea className="w-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none" rows={3} placeholder="Ví dụ: Khách hàng nâng cấp từ Basic lên Professional..." value={form.notes} onChange={(e) => setField('notes', e.target.value)} />
+            <textarea className="w-full border border-gray-300 px-4 py-3 text-gray-900 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none" rows={3} placeholder="Ví dụ: Khách hàng nâng cấp từ Basic lên Professional..." value={form.notes} onChange={(e) => setField('notes', e.target.value)} />
           </div>
         </Card>
 
         <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
           <Button type="button" variant="secondary" onClick={onCancel} disabled={isSaving} className="!rounded-none px-8">Huỷ</Button>
-          <Button type="submit" variant="primary" disabled={isSaving} className="!rounded-none px-8 bg-blue-600 hover:bg-blue-700">
+          <Button type="submit" variant="primary" disabled={isSaving} className="!rounded-none px-8 bg-primary-600 hover:bg-primary-700">
             {isSaving ? 'Đang xử lý...' : 'Xác nhận Gia hạn'}
           </Button>
         </div>

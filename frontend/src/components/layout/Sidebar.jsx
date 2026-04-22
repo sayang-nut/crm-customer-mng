@@ -22,10 +22,7 @@ const Sidebar = () => {
       {/* Logo - Plain white */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-600 
-                          rounded-lg flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-lg">B</span>
-          </div>
+          
           <div>
             <h1 className="text-lg font-bold text-dark-900 tracking-tight">BADO CRM</h1>
             <p className="text-xs text-gray-500 font-medium">Quản lý khách hàng</p>
@@ -41,11 +38,7 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `sidebar-nav-item rounded-lg transition-colors ${
-                  isActive 
-                    ? 'sidebar-nav-item-active bg-primary-50 border-l-4 border-primary-500 shadow-sm' 
-                    : 'hover:bg-gray-50'
-                }`
+                `sidebar-nav-item group ${isActive ? 'sidebar-nav-item-active border-l-4 border-primary-500 shadow-sm' : ''}`
               }
             >
               <item.icon className="sidebar-nav-icon text-gray-600 group-hover:text-primary-500" />

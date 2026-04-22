@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+/**
+ * @file     frontend/src/pages/auth/LoginPage.jsx
+ * @theme    WHITE PLAIN - Hình chữ nhật to, màu đơn giản, không hiệu ứng
+ */
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../store/authContext';
+import { Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Input from '../../components/common/Input';
-import Button from '../../components/common/Button';
 import { ROLE_HOME } from '../../constants';
 
 const LoginPage = () => {
@@ -20,15 +24,16 @@ const LoginPage = () => {
   const [mounted, setMounted] = useState(false);
 
   const emailRef = useRef(null);
+  const toastTimer = useRef(null);
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => setMounted(true), 50);
     emailRef.current?.focus();
     if (location.state?.message) {
       setToast(location.state.message);
       window.history.replaceState({}, document.title);
     }
-  }, [location]);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -50,92 +55,101 @@ const LoginPage = () => {
       const dest = ROLE_HOME[result.user.role] || '/dashboard';
       navigate(dest, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Email hoặc mật khẩu không chính xác.');
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      if (status === 401) setError('Email hoặc mật khẩu không đúng.');
+      else if (status === 403) setError(msg || 'Tài khoản không có quyền đăng nhập.');
+      else if (status === 422) setError('Dữ liệu không hợp lệ.');
+      else if (status === 429) setError('Quá nhiều yêu cầu. Thử lại sau 15 phút.');
+      else setError('Lỗi kết nối. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-6 font-sans text-slate-900">
-      
-      {/* Toast báo thành công */}
+    <div className="min-h-screen bg-gradient-to-br from-white to-blue-100 flex items-center justify-center p-6">
+      {/* Toast */}
       {toast && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-green-700 shadow-sm text-sm font-medium animate-in fade-in slide-in-from-top-4">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-green-500 text-white px-6 py-3 rounded-md shadow-lg border border-green-600">
+          <CheckCircle className="w-5 h-5" />
           {toast}
         </div>
       )}
 
-      <div className={`w-full max-w-[400px] transition-all duration-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Main Card */}
+      <div className="card w-full max-w-4xl p-12">
         
-        {/* Logo & Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-600 text-white text-2xl font-bold rounded-lg mb-4">
-            B
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Bado CRM</h1>
-          <p className="text-slate-500 text-sm mt-1">Đăng nhập vào hệ thống quản lý</p>
+        {/* Logo & Title */}
+        <div className="text-center mb-12">
+         
+          <h1 className="text-4xl font-black text-gray-900 mb-2">ĐĂNG NHẬP </h1>
+          <p className="text-lg text-gray-600 mb-4">Hệ thống quản lý khách hàng</p>
         </div>
 
-        {/* Thông báo lỗi */}
+        {/* Error Alert */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-lg mb-6 text-sm text-red-600">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            {error}
+          <div className="alert alert-danger max-w-md mx-auto mb-8 text-sm">
+            <div className="status-dot status-dot-danger mt-1.5 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Form đăng nhập */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            id="email"
-            label="Email"
-            ref={emailRef}
-            type="email"
-            placeholder="admin@bado.vn"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            className="w-full border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-
-          <div className="relative">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-md mx-auto">
+          <div>
             <Input
-              id="password"
+              ref={emailRef}
+              label="Email"
+              type="email"
+              autoComplete="email"
+              placeholder="ten@bado.vn"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={error ? ' ' : ''}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
               label="Mật khẩu"
               type={showPw ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              error={error ? ' ' : ''}
               disabled={loading}
-              className="w-full border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 pr-10"
+              required
+              icon={showPw ? EyeOff : Eye}
+              onIconClick={() => setShowPw(!showPw)}
             />
-            <button
-              type="button"
-              className="absolute right-3 bottom-2.5 p-1 text-slate-400 hover:text-slate-600"
-              onClick={() => setShowPw(!showPw)}
-              tabIndex={-1}
-            >
-              {showPw ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </button>
           </div>
 
-          <Button
+          <button
             type="submit"
-            loading={loading}
-            fullWidth
-            className="py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm"
+            className="btn btn-primary w-full h-14 text-lg font-bold gap-2"
+            disabled={loading}
           >
-            Đăng nhập
-          </Button>
+            {loading && <span className="spinner"></span>}
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          </button>
         </form>
 
-        
+        {/* Demo Accounts */}
+       
 
         {/* Footer */}
-        <div className="mt-8 text-center text-sm text-slate-400">
-          Quên mật khẩu? Vui lòng liên hệ <span className="text-blue-600 font-medium">Quản trị viên</span>
+        <div className="mt-10 pt-8 border-t border-gray-200 text-center max-w-md mx-auto">
+          <p className="text-sm text-gray-500">
+            Quên mật khẩu?{' '}
+            <button className="font-semibold text-blue-600 hover:text-blue-700">
+              Liên hệ Admin
+            </button>{' '}
+            để được cấp lại.
+          </p>
         </div>
       </div>
     </div>

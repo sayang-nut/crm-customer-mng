@@ -249,7 +249,7 @@ const RevenueFormPage = () => {
                             {customers.length === 0 && !fetchingCustomers ? (
                               <option value="" disabled>Không có khách hàng nào thuộc phụ trách của bạn</option>
                             ) : (
-                              <option value="">-- Chọn khách hàng --</option>
+                              <option value="">Chọn khách hàng </option>
                             )}
                             {customers.map(c => (
                               <option key={c.id} value={c.id}>{c.company_name || c.companyName} (Mã: {c.id})</option>
@@ -263,7 +263,7 @@ const RevenueFormPage = () => {
                           <div className="text-sm text-blue-600 py-2">Đang tải danh sách hợp đồng...</div>
                         ) : (
                           <select name="contractId" required className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            <option value="">-- Chọn hợp đồng --</option>
+                            <option value=""> Chọn hợp đồng</option>
                             {availableContracts.map(c => (
                               <option key={c.id} value={c.id}>#{c.contract_number} ({fmtVND(c.final_value)})</option>
                             ))}
@@ -294,9 +294,9 @@ const RevenueFormPage = () => {
                       disabled={!canEdit}
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                     >
-                      <option value="pending">🟠 Chờ khách thanh toán</option>
-                      <option value="paid">🟢 Đã thu tiền thành công</option>
-                      <option value="cancelled">⚫ Hủy bỏ khoản thu này</option>
+                      <option value="pending"> Chờ khách thanh toán</option>
+                      <option value="paid"> Đã thu tiền thành công</option>
+                      <option value="cancelled"> Hủy bỏ khoản thu </option>
                     </select>
                   </div>
 
@@ -327,7 +327,7 @@ const RevenueFormPage = () => {
                 {/* Luôn hiển thị phần tải chứng từ nếu tạo mới, hoặc nếu trạng thái là Đã thu */}
                 {(status === 'paid' || isNew) && (
                   <div className="bg-blue-50 border border-blue-200 p-5 rounded-lg">
-                    <label className="block text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <label className="block text-sm font-semibold text-blue-900 mb-2 ">
                       <Paperclip className="w-4 h-4" /> Đính kèm chứng từ (Bắt buộc)
                     </label>
                     {revenue?.proof_url && !proofFile && (
@@ -337,7 +337,7 @@ const RevenueFormPage = () => {
                     )}
                     {canEdit ? (
                       <>
-                        <input type="file" accept="image/*,application/pdf" onChange={(e) => setProofFile(e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700" required={status === 'paid' && !revenue?.proof_url} />
+                        <input type="file" accept="image/*,application/pdf" onChange={(e) => setProofFile(e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-600 file:text-white hover:file:bg-blue-700" required={status === 'paid' && !revenue?.proof_url} />
                         <p className="text-xs text-gray-500 mt-2">Hỗ trợ định dạng Ảnh (JPG, PNG) hoặc PDF.</p>
                       </>
                     ) : (

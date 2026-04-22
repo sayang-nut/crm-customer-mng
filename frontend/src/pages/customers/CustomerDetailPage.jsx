@@ -157,7 +157,7 @@ const CustomerDetailPage = () => {
           <div className="flex items-start gap-4 flex-1">
             {/* Avatar */}
             <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 
-                           rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                           flex items-center justify-center shadow-lg flex-shrink-0">
               <Building2 className="w-10 h-10 text-white" />
             </div>
             
@@ -221,7 +221,7 @@ const CustomerDetailPage = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`group flex items-center gap-2.5 py-4 px-6 rounded-t-lg -m-0.5 transition-all duration-200 font-medium ${
+                className={`group flex items-center gap-2.5 py-4 px-6 -m-0.5 transition-all duration-200 font-medium ${
                   active
                     ? 'bg-white border-b-2 border-primary-500 text-primary-700 shadow-sm'
                     : 'text-gray-600 hover:text-dark-900 hover:bg-gray-50 border-transparent'
@@ -230,7 +230,7 @@ const CustomerDetailPage = () => {
                 <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-primary-600' : 'text-gray-500 group-hover:text-gray-700'}`} />
                 <span>{tab.label}</span>
                 {tab.count !== null && (
-                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full font-semibold ${
+                  <span className={`ml-2 px-2 py-0.5 text-xs font-semibold ${
                     active 
                       ? 'bg-primary-100 text-primary-800' 
                       : 'bg-gray-100 text-gray-700'
@@ -298,7 +298,7 @@ const CustomerDetailPage = () => {
                     <label className="text-sm font-semibold text-gray-700 mb-2 block">
                       Địa chỉ
                     </label>
-                    <p className="text-lg text-dark-900 flex items-start gap-2 bg-gray-50 p-4 rounded-xl">
+                    <p className="text-lg text-dark-900 flex items-start gap-2 bg-gray-50 p-4">
                       <MapPin className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" />
                       <span>{currentCustomer.address || <span className="text-gray-400">Chưa cập nhật</span>}</span>
                     </p>
@@ -367,7 +367,7 @@ const CustomerDetailPage = () => {
                     {canAddContact && (
                       <button 
                         onClick={() => setShowAddContact(!showAddContact)}
-                        className="flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1.5 rounded-lg transition-colors"
+                        className="flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1.5 transition-colors"
                       >
                         <span className="text-lg leading-none">+</span> Thêm người
                       </button>
@@ -378,7 +378,7 @@ const CustomerDetailPage = () => {
               >
                 <div className="space-y-4">
                   {showAddContact && (
-                    <form onSubmit={handleAddContact} className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
+                    <form onSubmit={handleAddContact} className="bg-gray-50 p-4 border border-gray-200 mb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <Input
                           label="Họ và tên *"
@@ -433,7 +433,7 @@ const CustomerDetailPage = () => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {secondaryContacts.map(contact => (
-                        <div key={contact.id} className="p-4 border border-gray-200 rounded-xl hover:border-primary-300 transition-colors bg-white">
+                        <div key={contact.id} className="p-4 border border-gray-200 hover:border-primary-300 transition-colors bg-white">
                           <h4 className="font-bold text-dark-900 mb-1 flex items-center gap-2">
                             <User className="w-4 h-4 text-gray-500" />
                             {contact.full_name}
@@ -462,7 +462,7 @@ const CustomerDetailPage = () => {
 
               {currentCustomer.notes && (
                 <Card title="Ghi chú" className="shadow-sm">
-                  <div className="bg-gray-50 p-6 rounded-xl">
+                  <div className="bg-gray-50 p-6">
                     <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
                       {currentCustomer.notes}
                     </p>
@@ -479,13 +479,13 @@ const CustomerDetailPage = () => {
                 {contracts.length === 0 ? (
                   <p className="text-gray-500 italic text-center py-6">Khách hàng này chưa có hợp đồng nào.</p>
                 ) : contracts.map((contract) => (
-                  <div key={contract.id} className="group p-6 border border-gray-200 hover:border-primary-300 hover:shadow-md rounded-xl transition-all duration-200 cursor-pointer bg-white">
+                  <div key={contract.id} className="group p-6 border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all duration-200 cursor-pointer bg-white">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h4 className="text-xl font-black text-dark-900 mb-1">
                           {contract.solution || 'Giải pháp tùy chỉnh'}
                         </h4>
-                        <p className="text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-1 rounded-full inline-block">
+                        <p className="text-sm font-semibold text-gray-700 bg-gray-50 px-3 py-1 inline-block">
                           {contract.package || 'Gói tùy chọn'}
                         </p>
                       </div>
@@ -526,7 +526,7 @@ const CustomerDetailPage = () => {
                 {tickets.length === 0 ? (
                   <p className="text-gray-500 italic text-center py-6">Khách hàng chưa có yêu cầu hỗ trợ nào.</p>
                 ) : tickets.map((ticket) => (
-                  <div key={ticket.id} className="p-5 border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all bg-white cursor-pointer">
+                  <div key={ticket.id} className="p-5 border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all bg-white cursor-pointer">
                     <div className="flex justify-between items-start mb-3">
                       <h4 className="font-bold text-dark-900 text-lg">{ticket.title}</h4>
                       <Badge variant={ticket.status === 'resolved' || ticket.status === 'closed' ? 'success' : ticket.status === 'processing' ? 'warning' : 'info'}>
@@ -556,8 +556,8 @@ const CustomerDetailPage = () => {
                 {activities.length === 0 ? (
                   <p className="text-gray-500 italic text-center py-6">Chưa có hoạt động nào được ghi nhận.</p>
                 ) : activities.map((act) => (
-                  <div key={act.id} className="flex gap-4 p-4 border border-gray-100 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                  <div key={act.id} className="flex gap-4 p-4 border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="w-10 h-10 bg-primary-100 flex items-center justify-center flex-shrink-0">
                       <Clock className="w-5 h-5 text-primary-600" />
                     </div>
                     <div>
@@ -580,9 +580,9 @@ const CustomerDetailPage = () => {
         <div className="space-y-6 lg:sticky lg:top-8 lg:h-fit">
           <Card title="Thống kê nhanh" className="shadow-sm">
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-xl hover:bg-green-50/80 transition-colors">
+              <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 hover:bg-green-50/80 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-green-100 flex items-center justify-center">
                     <FileText className="w-5 h-5 text-green-600" />
                   </div>
                   <span className="text-sm font-semibold text-gray-800">Hợp đồng</span>
@@ -590,9 +590,9 @@ const CustomerDetailPage = () => {
                 <span className="text-2xl font-black text-green-700">{contracts.length}</span>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-50/80 transition-colors">
+              <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 hover:bg-orange-50/80 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-orange-100 flex items-center justify-center">
                     <Ticket className="w-5 h-5 text-orange-600" />
                   </div>
                   <span className="text-sm font-semibold text-gray-800">Tickets</span>
@@ -600,9 +600,9 @@ const CustomerDetailPage = () => {
                 <span className="text-2xl font-black text-orange-700">{tickets.length}</span>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-50/80 transition-colors">
+              <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 hover:bg-blue-50/80 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <div className="w-10 h-10 bg-blue-100 flex items-center justify-center">
                     <DollarSign className="w-5 h-5 text-blue-600" />
                   </div>
                   <span className="text-sm font-semibold text-gray-800">Doanh thu</span>
@@ -617,8 +617,8 @@ const CustomerDetailPage = () => {
           <Card title="Nhân sự phụ trách" className="shadow-sm">
             <div className="space-y-4">
               {currentCustomer.assigned_to_name ? (
-                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors -m-1.5">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md flex-shrink-0">
                     <span className="text-white font-bold text-sm">
                       {currentCustomer.assigned_to_name.charAt(0).toUpperCase()}
                     </span>
@@ -633,8 +633,8 @@ const CustomerDetailPage = () => {
               )}
               
               {currentCustomer.created_by_name && (
-                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors -m-1.5">
-                  <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors -m-1.5">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-md flex-shrink-0">
                     <span className="text-white font-bold text-sm">
                       {currentCustomer.created_by_name.charAt(0).toUpperCase()}
                     </span>

@@ -40,7 +40,7 @@ const Badge = ({ type, value, label }) => {
   const map = type === 'role' ? ROLE_COLORS : STATUS_COLORS;
   const colorClass = map[value] || 'bg-gray-400 text-white';
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>
+    <span className={`inline-block px-3 py-1 text-xs font-bold ${colorClass}`}>
       {label}
     </span>
   );
@@ -53,7 +53,7 @@ const Avatar = ({ name, size = 40 }) => {
   
   return (
     <div 
-      className="flex items-center justify-center font-bold rounded-full flex-shrink-0"
+      className="flex items-center justify-center font-bold flex-shrink-0"
       style={{ 
         width: size, 
         height: size, 
@@ -92,8 +92,8 @@ const ResetPwModal = ({ user, onClose }) => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-6 z-50" 
            onClick={onClose}>
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-          <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <div className="bg-white p-8 max-w-sm w-full text-center shadow-2xl">
+          <div className="w-16 h-16 bg-green-100 flex items-center justify-center mx-auto mb-6">
             <span className="text-2xl">✅</span>
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Reset thành công</h3>
@@ -102,7 +102,7 @@ const ResetPwModal = ({ user, onClose }) => {
           </p>
           <button 
             onClick={onClose}
-            className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition-all"
+            className="w-full bg-blue-600 text-white font-semibold py-3 px-6 hover:bg-blue-700 transition-all"
           >
             Đóng
           </button>
@@ -114,7 +114,7 @@ const ResetPwModal = ({ user, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-6 z-50" 
          onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+      <div className="bg-white p-8 max-w-sm w-full shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-gray-900">Reset mật khẩu</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
@@ -122,11 +122,11 @@ const ResetPwModal = ({ user, onClose }) => {
         
         <p className="text-gray-600 mb-6">
           Đặt lại mật khẩu cho <strong className="font-semibold">{user.full_name}</strong>.
-          Để trống → dùng <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono text-blue-600">Bado@123</code>.
+          Để trống → dùng <code className="bg-gray-100 px-2 py-1 text-sm font-mono text-blue-600">Bado@123</code>.
         </p>
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-6">
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-sm mb-6">
             {error}
           </div>
         )}
@@ -137,8 +137,8 @@ const ResetPwModal = ({ user, onClose }) => {
               type="password" 
               value={pw} 
               onChange={e => setPw(e.target.value)}
-              placeholder="Mật khẩu mới (tuỳ chọn)"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" 
+             
+              className="w-full px-4 py-3 border-2 border-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all" 
             />
           </div>
           
@@ -146,14 +146,14 @@ const ResetPwModal = ({ user, onClose }) => {
             <button 
               type="button" 
               onClick={onClose}
-              className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+              className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition-all"
             >
               Huỷ
             </button>
             <button 
               type="submit" 
               disabled={loading}
-              className="px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+              className="px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
             >
               {loading ? 'Đang xử lý…' : 'Reset mật khẩu'}
             </button>
@@ -240,7 +240,7 @@ const UsersPage = () => {
           </div>
           {isAdmin && (
             <button 
-              className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all duration-200 flex items-center gap-2 disabled:bg-gray-400 disabled:shadow-none"
+              className="px-8 py-3 bg-primary-600 text-white font-semibold shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all duration-200 flex items-center gap-2 disabled:bg-gray-400 disabled:shadow-none"
               onClick={() => setIsAdding(true)}
               disabled={isAdding || !!editUser}
             >
@@ -275,13 +275,13 @@ const UsersPage = () => {
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
           <input
-            className="flex-1 lg:w-96 px-4 py-3 bg-white border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all text-lg placeholder-gray-500"
-            placeholder="🔍 Tìm theo tên, email…"
+            className="flex-1 lg:w-96 px-4 py-3 bg-white border-2 border-gray-200 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all text-lg placeholder-gray-500"
+            placeholder="Tìm theo tên, email…"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
           />
           <select 
-            className="w-full lg:w-56 px-4 py-3 bg-white border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+            className="w-full lg:w-56 px-4 py-3 bg-white border-2 border-gray-200 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
             value={roleFilter} 
             onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
           >
@@ -291,7 +291,7 @@ const UsersPage = () => {
             ))}
           </select>
           <select 
-            className="w-full lg:w-56 px-4 py-3 bg-white border-2 border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
+            className="w-full lg:w-56 px-4 py-3 bg-white border-2 border-gray-200 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-400 transition-all"
             value={statusFilter} 
             onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
           >
@@ -303,13 +303,13 @@ const UsersPage = () => {
 
         {/* Error */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 mb-6">
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 mb-6">
             {error}
           </div>
         )}
 
         {/* Table */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mb-8">
+        <div className="bg-white shadow-xl border border-gray-200 overflow-hidden mb-8">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -373,25 +373,25 @@ const UsersPage = () => {
                         {isAdmin && (
                   <div className="flex flex-wrap gap-2">
                             <button 
-                              className="px-4 py-2 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition-all text-sm"
+                              className="px-4 py-2 bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition-all text-sm"
                               onClick={() => setEditUser(u)}
                             >
                               Sửa
                             </button>
                     <Link 
                       to={`/users/login-logs?userId=${u.id}`}
-                      className="px-4 py-2 bg-purple-100 text-purple-700 font-semibold rounded-lg hover:bg-purple-200 transition-all text-sm flex items-center"
+                      className="px-4 py-2 bg-purple-100 text-purple-700 font-semibold hover:bg-purple-200 transition-all text-sm flex items-center"
                     >
                       Lịch sử ĐN
                     </Link>
                             <button 
-                              className="px-4 py-2 bg-yellow-100 text-yellow-700 font-semibold rounded-lg hover:bg-yellow-200 transition-all text-sm"
+                              className="px-4 py-2 bg-yellow-100 text-yellow-700 font-semibold hover:bg-yellow-200 transition-all text-sm"
                               onClick={() => setResetUser(u)}
                             >
                               Reset PW
                             </button>
                             <button
-                              className={`px-4 py-2 font-semibold rounded-lg text-sm transition-all ${
+                              className={`px-4 py-2 font-semibold text-sm transition-all ${
                                 u.status === 'active' 
                                   ? 'bg-red-100 text-red-700 hover:bg-red-200' 
                                   : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -419,14 +419,14 @@ const UsersPage = () => {
                   <button 
                     disabled={page <= 1}
                     onClick={() => setPage(p => p - 1)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 border border-gray-300 font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     ← Trước
                   </button>
                   <button 
                     disabled={page >= totalPages}
                     onClick={() => setPage(p => p + 1)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 border border-gray-300 font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Sau →
                   </button>

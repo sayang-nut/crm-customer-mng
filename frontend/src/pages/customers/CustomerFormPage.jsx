@@ -455,7 +455,7 @@ const CustomerFormPage = () => {
               )}
             </Card>
 
-            {/* Tips */}
+            {/* Tips 
             <Card 
               title={<span className="text-lg font-bold text-dark-900">Gợi ý nhập liệu</span>}
               className="!rounded-none !shadow-none !border-gray-200 bg-gray-50/50"
@@ -479,6 +479,7 @@ const CustomerFormPage = () => {
                 </p>
               </div>
             </Card>
+            */}
           </div>
         </div>
       </form>

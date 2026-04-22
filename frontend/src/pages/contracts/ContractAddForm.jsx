@@ -193,10 +193,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
-                1
-              </span>
-              Thông tin khách hàng
+                      Thông tin khách hàng
             </h3>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -210,7 +207,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
                   value={form.customerId}
                   onChange={(e) => setField('customerId', e.target.value)}
                 >
-                  <option value="">-- Chọn khách hàng --</option>
+                  <option value="">Chọn doanh nghiệp</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.company_name} (MST: {c.tax_code || 'N/A'})
@@ -248,9 +245,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
-                2
-              </span>
+             
               Sản phẩm & Giải pháp
             </h3>
 
@@ -268,7 +263,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
                     setField('packageId', '');
                   }}
                 >
-                  <option value="">-- Chọn giải pháp --</option>
+                  <option value="">Chọn giải pháp</option>
                   {solutions.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -288,7 +283,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
                   value={form.packageId}
                   onChange={(e) => setField('packageId', e.target.value)}
                 >
-                  <option value="">-- Chọn gói dịch vụ --</option>
+                  <option value=""> Chọn gói dịch vụ</option>
                   {availablePackages.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} ({String(p.level).toUpperCase()})
@@ -316,9 +311,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
         <Card className="border border-gray-200 !rounded-none !shadow-none">
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center text-sm">
-                3
-              </span>
+              
               Thời hạn & Tài chính
             </h3>
 
@@ -353,7 +346,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 ">
                   Ngày kết thúc
-                  <Calculator className="w-4 h-4 text-blue-600" />
+                  
                 </label>
                 <input
                   type="date"
@@ -407,7 +400,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
               <div>
                 <label className="block text-sm font-semibold text-gray-500 mb-2">
                   Giá trị thu thực
-                  <DollarSign className="w-4 h-4 text-green-600" />
+                 
                 </label>
                 <div className="px-0 py-2 text-2xl font-black text-green-700 border-0 border-b border-transparent">
                   {fmtVND(form.finalValue)}
@@ -459,7 +452,7 @@ const ContractAddForm = ({ onCancel, onSaved }) => {
                   value={form.cskhId}
                   onChange={(e) => setField('cskhId', e.target.value)}
                 >
-                  <option value="">-- Chọn nhân viên CSKH --</option>
+                  <option value="">Chọn nhân viên CSKH </option>
                   {cskhUsers.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.full_name || u.fullName}

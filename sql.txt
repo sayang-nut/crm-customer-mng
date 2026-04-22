@@ -482,3 +482,129 @@ ADD COLUMN `cskh_id` INT UNSIGNED NULL COMMENT 'FK → users.id (CSKH phụ trá
 ALTER TABLE `contracts`
 ADD CONSTRAINT `fk_cont_cskh`
 FOREIGN KEY (`cskh_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+
+
+//data
+
+USE crm_customer;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- 1. Xóa dữ liệu giao dịch cũ (nếu có) để ID bắt đầu lại từ 1 cho chuẩn xác
+TRUNCATE TABLE `notifications`;
+TRUNCATE TABLE `revenues`;
+TRUNCATE TABLE `ticket_attachments`;
+TRUNCATE TABLE `tickets`;
+TRUNCATE TABLE `contract_renewal_history`;
+TRUNCATE TABLE `contracts`;
+TRUNCATE TABLE `customer_status_history`;
+TRUNCATE TABLE `contacts`;
+TRUNCATE TABLE `customers`;
+TRUNCATE TABLE `login_logs`;
+
+-- ==============================================================================
+-- KỊCH BẢN 1: KHÁCH HÀNG VIP - HOẠT ĐỘNG TỐT (ACTIVE)
+-- Có hợp đồng Active, Đã thanh toán, Ticket đã xử lý
+-- ==============================================================================
+INSERT INTO `customers` (`id`, `company_name`, `tax_code`, `address`, `industry_id`, `website`, `source`, `status`, `assigned_to`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'Công ty CP Bán lẻ Kỹ thuật số FPT', '0311609355', '261-263 Khánh Hội, Phường 2, Quận 4, TP.HCM', 2, 'fptshop.com.vn', 'referral', 'active', 3, 'Khách hàng VIP, cần chăm sóc kỹ.', 3, DATE_SUB(NOW(), INTERVAL 30 DAY), NOW());
+
+INSERT INTO `contacts` (`customer_id`, `full_name`, `phone`, `email`, `notes`, `is_primary`) VALUES
+(1, 'Nguyễn Bạch Điệp', '0901234567', 'diepnb@fpt.com.vn', 'Giám đốc', 1),
+(1, 'Trần Kế Toán', '0912345678', 'ketoan@fpt.com.vn', 'Kế toán trưởng - Gửi hóa đơn vào đây', 0);
+
+INSERT INTO `contracts` (`id`, `contract_number`, `customer_id`, `solution_id`, `package_id`, `billing_cycle`, `start_date`, `end_date`, `value`, `discount`, `final_value`, `status`, `assigned_to`, `cskh_id`, `notes`, `created_by`) VALUES
+(1, 'HD-2024-FPT-001', 1, 1, 4, 'yearly', DATE_SUB(CURDATE(), INTERVAL 2 MONTH), DATE_ADD(CURDATE(), INTERVAL 10 MONTH), 15000000, 10, 13500000, 'active', 3, 4, 'Hợp đồng Bado Retail Đa kênh', 3);
+
+INSERT INTO `revenues` (`contract_id`, `customer_id`, `amount`, `status`, `due_date`, `payment_date`, `payment_method`, `billing_period`, `created_by`) VALUES
+(1, 1, 13500000, 'paid', DATE_SUB(CURDATE(), INTERVAL 50 DAY), DATE_SUB(CURDATE(), INTERVAL 55 DAY), 'bank_transfer', '2024', 3);
+
+INSERT INTO `tickets` (`id`, `title`, `description`, `resolution_notes`, `customer_id`, `contract_id`, `priority`, `status`, `assigned_to`, `created_by`, `resolved_at`, `created_at`) VALUES
+(1, 'Lỗi đồng bộ tồn kho Shopee', 'Tồn kho không nhảy khi có đơn mới trên Shopee', 'Đã fix API key Shopee', 1, 1, 'high', 'resolved', 5, 4, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 5 DAY));
+
+
+-- ==============================================================================
+-- KỊCH BẢN 2: KHÁCH HÀNG SẮP HẾT HẠN (NEAR_EXPIRED)
+-- Để Dashboard hiển thị cảnh báo Gia hạn, có Ticket đang xử lý
+-- ==============================================================================
+INSERT INTO `customers` (`id`, `company_name`, `tax_code`, `address`, `industry_id`, `website`, `source`, `status`, `assigned_to`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(2, 'Chuỗi Nhà hàng Wrap & Roll', '0312456789', '111 Nguyễn Huệ, Quận 1, TP.HCM', 7, 'wrap-roll.com', 'event', 'active', 3, 'Nhà hàng có 15 chi nhánh, đang dùng FnB.', 3, DATE_SUB(NOW(), INTERVAL 360 DAY), NOW());
+
+INSERT INTO `contacts` (`customer_id`, `full_name`, `phone`, `email`, `notes`, `is_primary`) VALUES
+(2, 'Lê Thái Bình', '0987654321', 'binhlt@wrap-roll.com', 'Quản lý vận hành', 1);
+
+-- Ngày hết hạn chỉ còn 15 ngày nữa (nằm trong cảnh báo 30 ngày)
+INSERT INTO `contracts` (`id`, `contract_number`, `customer_id`, `solution_id`, `package_id`, `billing_cycle`, `start_date`, `end_date`, `value`, `discount`, `final_value`, `status`, `assigned_to`, `cskh_id`, `warn_30_sent`, `created_by`) VALUES
+(2, 'HD-2023-WNR-002', 2, 5, 9, 'yearly', DATE_SUB(CURDATE(), INTERVAL 350 DAY), DATE_ADD(CURDATE(), INTERVAL 15 DAY), 15000000, 0, 15000000, 'near_expired', 3, 4, 1, 3);
+
+INSERT INTO `revenues` (`contract_id`, `customer_id`, `amount`, `status`, `due_date`, `payment_date`, `payment_method`, `billing_period`, `created_by`) VALUES
+(2, 2, 15000000, 'paid', DATE_SUB(CURDATE(), INTERVAL 350 DAY), DATE_SUB(CURDATE(), INTERVAL 348 DAY), 'online', '2023', 3);
+
+INSERT INTO `tickets` (`id`, `title`, `description`, `customer_id`, `contract_id`, `priority`, `status`, `assigned_to`, `created_by`, `created_at`) VALUES
+(2, 'Cần xuất báo cáo ca gộp', 'Bếp trưởng yêu cầu xuất báo cáo gộp 3 ca trong ngày.', 2, 2, 'medium', 'processing', 4, 4, DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+
+-- ==============================================================================
+-- KỊCH BẢN 3: KHÁCH HÀNG ĐÃ HẾT HẠN & NỢ TIỀN (EXPIRED + URGENT TICKET)
+-- ==============================================================================
+INSERT INTO `customers` (`id`, `company_name`, `tax_code`, `address`, `industry_id`, `website`, `source`, `status`, `assigned_to`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(3, 'Thẩm mỹ viện Lan Anh', '0109876543', '55 Cầu Giấy, Hà Nội', 4, 'spalananh.vn', 'cold_call', 'expired', 3, 'Khách chê giá đắt, đang nợ tiền gia hạn.', 3, DATE_SUB(NOW(), INTERVAL 400 DAY), NOW());
+
+INSERT INTO `contacts` (`customer_id`, `full_name`, `phone`, `email`, `notes`, `is_primary`) VALUES
+(3, 'Đào Lan Anh', '0933333333', 'ceo@spalananh.vn', 'Owner', 1);
+
+-- Đã hết hạn cách đây 5 ngày
+INSERT INTO `contracts` (`id`, `contract_number`, `customer_id`, `solution_id`, `package_id`, `billing_cycle`, `start_date`, `end_date`, `value`, `discount`, `final_value`, `status`, `assigned_to`, `cskh_id`, `warn_30_sent`, `warn_7_sent`, `expired_remind_sent`, `created_by`) VALUES
+(3, 'HD-2023-SPA-003', 3, 3, 6, 'yearly', DATE_SUB(CURDATE(), INTERVAL 370 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY), 9000000, 0, 9000000, 'expired', 3, 4, 1, 1, 1, 3);
+
+-- Doanh thu Pending quá hạn (Quá due_date)
+INSERT INTO `revenues` (`contract_id`, `customer_id`, `amount`, `status`, `due_date`, `billing_period`, `created_by`) VALUES
+(3, 3, 9000000, 'pending', DATE_SUB(CURDATE(), INTERVAL 5 DAY), '2024', 3);
+
+-- Ticket Urgent bị bỏ quên (Stale)
+INSERT INTO `tickets` (`id`, `title`, `description`, `customer_id`, `contract_id`, `priority`, `status`, `assigned_to`, `created_by`, `last_updated_at`, `stale_notified`, `created_at`) VALUES
+(3, 'Phần mềm không thể login!', 'Khách báo bị văng ra, không check in được cho khách làm mặt.', 3, 3, 'urgent', 'open', NULL, 3, DATE_SUB(NOW(), INTERVAL 3 DAY), 1, DATE_SUB(NOW(), INTERVAL 3 DAY));
+
+
+-- ==============================================================================
+-- KỊCH BẢN 4: KHÁCH HÀNG MỚI (LEAD) - ĐANG CHỜ DUYỆT HỢP ĐỒNG (PENDING/REJECTED)
+-- ==============================================================================
+INSERT INTO `customers` (`id`, `company_name`, `tax_code`, `address`, `industry_id`, `website`, `source`, `status`, `assigned_to`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(4, 'Công ty TNHH Thời trang Juno', '0310874632', '313 Nguyễn Thị Thập, Quận 7, TP.HCM', 1, 'juno.vn', 'website', 'lead', 3, 'Lead nóng từ web, cần chốt ngay gói Đa kênh.', 3, NOW(), NOW());
+
+INSERT INTO `contacts` (`customer_id`, `full_name`, `phone`, `email`, `notes`, `is_primary`) VALUES
+(4, 'Phạm CEO', '0966666666', 'ceo@juno.vn', 'Giám đốc', 1);
+
+-- Hợp đồng đầu tiên bị từ chối do giảm giá quá nhiều
+INSERT INTO `contracts` (`id`, `contract_number`, `customer_id`, `solution_id`, `package_id`, `billing_cycle`, `start_date`, `end_date`, `value`, `discount`, `final_value`, `status`, `assigned_to`, `reject_reason`, `created_by`) VALUES
+(4, 'HD-2024-JUN-004-V1', 4, 2, 4, 'yearly', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 15000000, 50, 7500000, 'rejected', 3, 'Chiết khấu 50% quá mức cho phép, tối đa chỉ được 20%. Đề nghị Sales đàm phán lại.', 3);
+
+-- Hợp đồng mới đang chờ duyệt (Pending)
+INSERT INTO `contracts` (`id`, `contract_number`, `customer_id`, `solution_id`, `package_id`, `billing_cycle`, `start_date`, `end_date`, `value`, `discount`, `final_value`, `status`, `assigned_to`, `created_by`) VALUES
+(5, 'HD-2024-JUN-004-V2', 4, 2, 4, 'yearly', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), 15000000, 20, 12000000, 'pending', 3, 3);
+
+
+-- ==============================================================================
+-- DỮ LIỆU LỊCH SỬ HOẠT ĐỘNG (Customer Status History)
+-- ==============================================================================
+INSERT INTO `customer_status_history` (`customer_id`, `from_status`, `to_status`, `reason`, `changed_by`, `created_at`) VALUES
+(1, NULL, 'lead', 'Tạo mới từ Referral', 3, DATE_SUB(NOW(), INTERVAL 30 DAY)),
+(1, 'lead', 'active', 'Ký hợp đồng HD-2024-FPT-001', 2, DATE_SUB(NOW(), INTERVAL 28 DAY)),
+(3, 'active', 'expired', 'Hết hạn hợp đồng, khách chưa gia hạn', 1, DATE_SUB(NOW(), INTERVAL 5 DAY));
+
+
+-- ==============================================================================
+-- DỮ LIỆU LOG ĐĂNG NHẬP VÀ THÔNG BÁO HỆ THỐNG
+-- ==============================================================================
+INSERT INTO `login_logs` (`user_id`, `status`, `created_at`) VALUES
+(1, 'success', DATE_SUB(NOW(), INTERVAL 1 HOUR)),
+(1, 'failed', DATE_SUB(NOW(), INTERVAL 2 HOUR)),
+(3, 'success', DATE_SUB(NOW(), INTERVAL 3 HOUR)),
+(4, 'success', DATE_SUB(NOW(), INTERVAL 4 HOUR));
+
+INSERT INTO `notifications` (`user_id`, `type`, `title`, `message`, `ref_type`, `ref_id`, `is_read`, `created_at`) VALUES
+(3, 'contract_warn_30', 'Hợp đồng sắp hết hạn', 'Hợp đồng HD-2023-WNR-002 của Chuỗi Nhà hàng Wrap & Roll sẽ hết hạn sau 15 ngày.', 'contract', 2, 0, NOW()),
+(4, 'ticket_stale', 'Cảnh báo Ticket trễ hạn SLA', 'Ticket "Phần mềm không thể login!" đã quá 36h không được cập nhật.', 'ticket', 3, 0, NOW()),
+(2, 'contract_pending', 'Có hợp đồng cần phê duyệt', 'Sales Trần Sales vừa trình hợp đồng HD-2024-JUN-004-V2. Vui lòng phê duyệt.', 'contract', 5, 0, NOW());
+
+SET FOREIGN_KEY_CHECKS = 1;

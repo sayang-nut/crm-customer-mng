@@ -1,5 +1,4 @@
 /**
- * @file      frontend/src/pages/dashboard/DashboardPage.jsx
  * VAI TRÒ: Trang Dashboard – KPI theo role (Admin/Sales/CSKH)
  */
 
@@ -75,7 +74,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="bg-white min-h-full space-y-8 p-1">  {/* ✅ WHITE CONTAINER */}
+    <div className="bg-white min-h-full space-y-8 p-1">  
       
       {/* Header - WHITE PLAIN */}
       <header className="space-y-2 pb-8 border-b border-gray-200">
@@ -196,7 +195,7 @@ const AdminDashboard = ({ data }) => (
   </div>
 );
 
-// ✅ SALES DASHBOARD - WHITE PLAIN
+// SALES DASHBOARD
 const SalesDashboard = ({ data }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -224,11 +223,11 @@ const SalesDashboard = ({ data }) => (
       />
     </div>
 
-    {/* My Expiring Contracts - LIGHT ORANGE */}
+    {/* Hợp đồng sắp hết hạn - LIGHT ORANGE */}
     {data.myExpiringContracts?.length > 0 && (
       <Card className="border border-orange-200 bg-orange-50 shadow-sm">
         <h3 className="text-xl font-bold text-orange-900 p-6 border-b border-orange-200">
-          Hợp đồng sắp hết hạn của tôi ({data.myExpiringContracts.length})
+          Hợp đồng sắp hết hạn ({data.myExpiringContracts.length})
         </h3>
         <div className="divide-y divide-orange-200">
           {data.myExpiringContracts.map((c) => (
@@ -250,7 +249,7 @@ const SalesDashboard = ({ data }) => (
   </div>
 );
 
-// ✅ CSKH DASHBOARD - WHITE PLAIN
+//  CSKH DASHBOARD 
 const CSKHDashboard = ({ data }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

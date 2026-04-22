@@ -100,7 +100,7 @@ const CustomersPage = () => {
     };
     const config = statusConfig[status] || statusConfig.lead;
     return (
-      <Badge variant={config.variant} className="!rounded-none !shadow-none font-bold">
+      <Badge variant={config.variant} className="!shadow-none font-bold">
         {config.label}
       </Badge>
     );
@@ -155,7 +155,7 @@ const CustomersPage = () => {
       label: 'Sales phụ trách',
       render: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gray-50 border border-gray-200 rounded-sm flex items-center justify-center">
+          <div className="w-8 h-8 bg-gray-50 border border-gray-200 flex items-center justify-center">
             <User className="w-4 h-4 text-gray-500" />
           </div>
           <span className="text-sm text-gray-700 font-medium">
@@ -236,7 +236,7 @@ const CustomersPage = () => {
         <Button
           variant="primary"
           icon={Plus}
-          className="!rounded-none !shadow-none !bg-primary-600 hover:!bg-primary-700 h-12 px-6 text-lg font-bold"
+          className="!shadow-none !bg-primary-600 hover:!bg-primary-700 h-12 px-6 text-lg font-bold"
           onClick={() => navigate('/customers/new')}
         >
           Thêm khách hàng
@@ -259,7 +259,7 @@ const CustomersPage = () => {
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <Button type="submit" variant="primary" className="!rounded-none h-12 px-6">
+              <Button type="submit" variant="primary" className="h-12 px-6">
                 Tìm kiếm
               </Button>
               <Button
@@ -267,7 +267,7 @@ const CustomersPage = () => {
                 variant="outline"
                 icon={Filter}
                 onClick={() => setShowFilters(!showFilters)}
-                className="!rounded-none h-12 px-6"
+                className="h-12 px-6"
               >
                 Bộ lọc
               </Button>
@@ -324,10 +324,10 @@ const CustomersPage = () => {
             </div>
 
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
-              <Button variant="secondary" onClick={handleClearFilters} className="!rounded-none">
+              <Button variant="secondary" onClick={handleClearFilters}>
                 Xóa bộ lọc
               </Button>
-              <Button variant="primary" className="!rounded-none px-8">
+              <Button variant="primary" className="px-8">
                 Áp dụng
               </Button>
             </div>

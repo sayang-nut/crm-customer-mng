@@ -216,7 +216,7 @@ const Profile = () => {
                 </div>
                 <label
                   htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors shadow-lg"
+                  className="absolute bottom-0 right-0 bg-primary-600 text-white p-2 rounded-full cursor-pointer hover:bg--700 transition-colors shadow-lg"
                 >
                   <Camera className="w-4 h-4" />
                 </label>
