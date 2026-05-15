@@ -3,12 +3,9 @@ use crm_customer;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 SET time_zone = '+07:00';
-
--- ----------------------------------------------------------------
 -- 1. users
 --    Nhân viên nội bộ sử dụng hệ thống CRM.
 --    Roles: admin | manager | sales | cskh | technical
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `users` (
   `id`               INT UNSIGNED    NOT NULL AUTO_INCREMENT,
   `full_name`        VARCHAR(100)    NOT NULL                    COMMENT 'Họ và tên đầy đủ',
@@ -39,11 +36,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Nhân viên nội bộ sử dụng CRM';
 
--- ----------------------------------------------------------------
--- 2. login_logs
---    Ghi nhận mọi lần đăng nhập (thành công & thất bại).
---    Phục vụ audit bảo mật, Admin giám sát.
--- ----------------------------------------------------------------
+-- 2. login_logs: Ghi nhận mọi lần đăng nhập (thành công & thất bại).
 CREATE TABLE IF NOT EXISTS `login_logs` (
   `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`    INT UNSIGNED    NOT NULL                    COMMENT 'FK → users.id',
@@ -62,12 +55,7 @@ CREATE TABLE IF NOT EXISTS `login_logs` (
     FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Lịch sử đăng nhập hệ thống';
-
--- ----------------------------------------------------------------
--- 3. industries
---    Danh mục ngành nghề của khách hàng doanh nghiệp.
---    Ví dụ: Thời trang, Spa & Làm đẹp, Nhà hàng, …
--- ----------------------------------------------------------------
+-- 3. industries: Danh mục ngành nghề của khách hàng doanh nghiệp.
 CREATE TABLE IF NOT EXISTS `industries` (
   `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name`       VARCHAR(150) NOT NULL                    COMMENT 'Tên ngành nghề – unique',
@@ -78,12 +66,8 @@ CREATE TABLE IF NOT EXISTS `industries` (
   UNIQUE KEY `uq_industries_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Danh mục ngành nghề kinh doanh của khách hàng';
-
--- ----------------------------------------------------------------
--- 4. solution_groups
---    Nhóm giải pháp cấp cao nhất.
+-- 4. solution_groups:  Nhóm giải pháp cấp cao nhất.
 --    Ví dụ: Bán lẻ | Lưu trú & Làm đẹp | Ăn uống & Giải trí
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `solution_groups` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `name`        VARCHAR(150) NOT NULL           COMMENT 'Tên nhóm giải pháp',
@@ -115,13 +99,9 @@ CREATE TABLE IF NOT EXISTS `solutions` (
     FOREIGN KEY (`solution_group_id`) REFERENCES `solution_groups` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Giải pháp phần mềm cụ thể (cấp 2)';
-
--- ----------------------------------------------------------------
--- 6. service_packages
---    Gói dịch vụ theo từng giải pháp.
+-- 6. service_packages:Gói dịch vụ theo từng giải pháp.
 --    level: support < basic < professional < multichannel
---    Lưu cả giá tháng & năm, trạng thái đang bán / ngừng bán.
--- ----------------------------------------------------------------
+--    Lưu cả giá tháng & năm, trạng thái đang bán / ngừng bán.-
 CREATE TABLE IF NOT EXISTS `service_packages` (
   `id`            INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   `solution_id`   INT UNSIGNED  NOT NULL                COMMENT 'FK → solutions.id',
@@ -151,12 +131,9 @@ CREATE TABLE IF NOT EXISTS `service_packages` (
     FOREIGN KEY (`solution_id`) REFERENCES `solutions` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Gói dịch vụ của từng giải pháp';
-
--- ----------------------------------------------------------------
 -- 7. customers
 --    Doanh nghiệp khách hàng.
 --    Vòng đời trạng thái: lead → active → expired (→ active khi tái ký)
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `customers` (
   `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `company_name` VARCHAR(200) NOT NULL           COMMENT 'Tên doanh nghiệp',
@@ -191,12 +168,9 @@ CREATE TABLE IF NOT EXISTS `customers` (
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Doanh nghiệp khách hàng';
-
--- ----------------------------------------------------------------
 -- 8. contacts
 --    Các đầu mối liên hệ trong cùng một doanh nghiệp.
 --    Vai trò ghi vào notes (giám đốc, kế toán, IT, v.v.)
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `contacts` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `customer_id` INT UNSIGNED NOT NULL           COMMENT 'FK → customers.id',
@@ -215,11 +189,7 @@ CREATE TABLE IF NOT EXISTS `contacts` (
     FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Đầu mối liên hệ trong doanh nghiệp khách hàng';
-
--- ----------------------------------------------------------------
--- 9. customer_status_history
---    Lưu lịch sử đầy đủ mỗi lần trạng thái khách hàng thay đổi.
--- ----------------------------------------------------------------
+-- 9. customer_status_history: Lưu lịch sử đầy đủ mỗi lần trạng thái khách hàng thay đổi.
 CREATE TABLE IF NOT EXISTS `customer_status_history` (
   `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `customer_id` INT UNSIGNED    NOT NULL           COMMENT 'FK → customers.id',
@@ -247,13 +217,10 @@ CREATE TABLE IF NOT EXISTS `customer_status_history` (
     FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Lịch sử chuyển trạng thái khách hàng';
-
--- ----------------------------------------------------------------
 -- 10. contracts
 --     Hợp đồng dịch vụ.
 --     Gia hạn = UPDATE record này + INSERT contract_renewal_history.
 --     Các cột warn_*_sent phòng tránh gửi thông báo trùng.
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `contracts` (
   `id`                  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   `contract_number`     VARCHAR(100)  NOT NULL               COMMENT 'Số hợp đồng – unique',
@@ -302,12 +269,9 @@ CREATE TABLE IF NOT EXISTS `contracts` (
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Hợp đồng dịch vụ';
-
--- ----------------------------------------------------------------
 -- 11. contract_renewal_history
 --     Lưu snapshot mỗi lần gia hạn / nâng cấp hợp đồng.
 --     Giúp xem lại toàn bộ quá trình gia hạn theo thứ tự thời gian.
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `contract_renewal_history` (
   `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `contract_id`    INT UNSIGNED    NOT NULL           COMMENT 'FK → contracts.id',
@@ -331,12 +295,9 @@ CREATE TABLE IF NOT EXISTS `contract_renewal_history` (
     FOREIGN KEY (`renewed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Lịch sử gia hạn / nâng cấp hợp đồng';
-
--- ----------------------------------------------------------------
 -- 12. tickets
---     Yêu cầu hỗ trợ từ khách hàng 
+--     Yêu cầu hỗ trợ từ khách hàng (Đã tinh gọn, loại bỏ tính năng Chat/Comment).
 --     Vòng đời: open → processing → resolved → closed
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `tickets` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `title`                VARCHAR(300) NOT NULL               COMMENT 'Tiêu đề / Tóm tắt lỗi',
@@ -374,11 +335,8 @@ CREATE TABLE IF NOT EXISTS `tickets` (
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Ticket yêu cầu hỗ trợ (rút gọn)';
-
--- ----------------------------------------------------------------
 -- 13. ticket_attachments
 --     File đính kèm trong ticket (screenshot, log, hướng dẫn...).
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ticket_attachments` (
   `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `ticket_id`   INT UNSIGNED    NOT NULL           COMMENT 'FK → tickets.id',
@@ -398,12 +356,9 @@ CREATE TABLE IF NOT EXISTS `ticket_attachments` (
     FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='File đính kèm trong ticket';
-
--- ----------------------------------------------------------------
 -- 14. revenues
 --     Ghi nhận các lần thanh toán hợp đồng.
 --     Chỉ Sales (+ Admin) được tạo bản ghi.
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `revenues` (
   `id`             INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   `contract_id`    INT UNSIGNED  NOT NULL               COMMENT 'FK → contracts.id',
@@ -418,6 +373,7 @@ CREATE TABLE IF NOT EXISTS `revenues` (
   `payment_date`   DATE          NULL                   COMMENT 'Ngày khách thanh toán thực tế (NULL khi pending)',
   `payment_method` ENUM(
                      'bank_transfer',
+                     'cash',
                      'online'
                    )             NULL                   COMMENT 'Phương thức thanh toán',
   `billing_period` VARCHAR(50)   NULL                   COMMENT 'Kỳ thanh toán: 2025 | 2025-01 | 2025-Q1',
@@ -441,12 +397,9 @@ CREATE TABLE IF NOT EXISTS `revenues` (
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Bản ghi thanh toán hợp đồng dịch vụ';
-
--- ----------------------------------------------------------------
 -- 15. notifications
 --     Thông báo hệ thống – sinh tự động bởi cron jobs.
 --     ref_type + ref_id : liên kết đến contract hoặc ticket.
--- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `notifications` (
   `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`        INT UNSIGNED    NOT NULL           COMMENT 'FK → users.id (người nhận)',
@@ -469,20 +422,15 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Thông báo hệ thống (in-app )';
 
--- ================================================================
 SET FOREIGN_KEY_CHECKS = 1;
--- ================================================================
 -- END OF SCHEMA
--- ================================================================
--- Thêm cột cskh_id nằm ngay sau cột assigned_to
+use crm_customer;
 ALTER TABLE `contracts`
 ADD COLUMN `cskh_id` INT UNSIGNED NULL COMMENT 'FK → users.id (CSKH phụ trách)' AFTER `assigned_to`;
 
--- Thêm khoá ngoại đảm bảo tính toàn vẹn dữ liệu  
 ALTER TABLE `contracts`
 ADD CONSTRAINT `fk_cont_cskh`
 FOREIGN KEY (`cskh_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
-
 
 
 //data

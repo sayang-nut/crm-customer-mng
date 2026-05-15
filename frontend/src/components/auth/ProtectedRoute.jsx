@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  // ✅ Chờ init xong
+  // Chờ init xong
   if (isLoading) {
     return (
       <div style={{

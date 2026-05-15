@@ -1,12 +1,5 @@
 'use strict';
 require('module-alias/register');
-/**
- * Error Middleware
- * ─────────────────────────────────────────────────────────────────
- * AppError   : Custom operational error (có statusCode, isOperational)
- * errorHandler: Express global error handler (4 tham số)
- * ─────────────────────────────────────────────────────────────────
- */
 
 const logger = require('@config/logger');
 const { default: moduleAlias } = require('module-alias');

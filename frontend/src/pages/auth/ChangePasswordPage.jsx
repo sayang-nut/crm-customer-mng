@@ -1,21 +1,16 @@
-/**
- * @file     frontend/src/pages/auth/ChangePasswordPage.jsx
- * @location frontend/src/pages/auth/
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: Trang đổi mật khẩu cá nhân.
- *   - Form: mật khẩu hiện tại + mật khẩu mới + xác nhận
- *   - Validation client: độ dài, pattern, xác nhận khớp
- *   - Gọi useChangePassword hook
- *   - Sau thành công: hiển thị countdown → redirect /login
- * ─────────────────────────────────────────────────────────────────
- */
+/* VAI TRÒ: Trang đổi mật khẩu cá nhân.
+    - Form: mật khẩu hiện tại + mật khẩu mới + xác nhận
+   - Validation client: độ dài, pattern, xác nhận khớp
+    - Gọi useChangePassword hook
+    - Sau thành công: hiển thị countdown → redirect /login
+*/
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../store/authContext';
 import useChangePassword from '../../hooks/useChangePassword';
 
-// ── Icons ─────────────────────────────────────────────────────────
+// ── Icons
 const EyeIcon = ({ open }) => open ? (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -32,7 +27,7 @@ const ArrowLeftIcon = () => (
   </svg>
 );
 
-// ── Password strength ─────────────────────────────────────────────
+// ── Password strength
 const getStrength = (pw) => {
   let score = 0;
   if (pw.length >= 8)          score++;
@@ -67,7 +62,7 @@ const StrengthBar = ({ password }) => {
   );
 };
 
-// ── Requirement check ─────────────────────────────────────────────
+// ── Requirement check  
 const Req = ({ ok, text }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
     <div style={{

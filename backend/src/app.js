@@ -74,7 +74,7 @@ const apiLimiter = rateLimit({
   skip: (req) => process.env.NODE_ENV !== 'production', // ← SKIP hoàn toàn khi dev
 });
 
-// ── API Routes ────────────────────────────────────────────────────
+// ── API Routes 
 app.use('/api/auth',          authLimiter, authRoutes);
 app.use('/api/users',         apiLimiter,  usersRoutes);
 app.use('/api/customers',     apiLimiter,  customersRoutes);
@@ -86,7 +86,7 @@ app.use('/api/dashboard',     apiLimiter,  dashboardRoutes);
 app.use('/api/notifications', apiLimiter,  notificationsRoutes);
 app.use('/api/upload',        apiLimiter,  uploadRoutes);
 
-// ── Health check ──────────────────────────────────────────────────
+// ── Health check 
 app.get('/health', (req, res) => {
   res.json({
     status:    'ok',
@@ -97,7 +97,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── 404 handler ───────────────────────────────────────────────────
+// ── 404 handler  
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -105,10 +105,10 @@ app.use((req, res) => {
   });
 });
 
-// ── Global error handler (phải đặt cuối cùng) ────────────────────
+// ── Global error handler (phải đặt cuối cùng)  
 app.use(errorHandler);
 
-// ── Start server ──────────────────────────────────────────────────
+// ── Start server 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 
 const start = async () => {
@@ -117,7 +117,7 @@ const start = async () => {
     logger.info('Database connected successfully.');
 
     const server = app.listen(PORT, () => {
-      logger.info(`🚀 Bado CRM API running on port ${PORT}`);
+      logger.info(` Bado CRM API running on port ${PORT}`);
       logger.info(`   ENV : ${process.env.NODE_ENV || 'development'}`);
       logger.info(`   URL : http://localhost:${PORT}`);
     });

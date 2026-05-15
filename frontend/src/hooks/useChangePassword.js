@@ -1,12 +1,8 @@
 /**
- * @file     frontend/src/hooks/useChangePassword.js
- * @location frontend/src/hooks/
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: Custom hook đổi mật khẩu.
- *   - Gọi authService.changePassword()
- *   - Trả về { loading, error, success, submit }
- * ─────────────────────────────────────────────────────────────────
- */
+ VAI TRÒ: Custom hook đổi mật khẩu.
+    - Gọi authService.changePassword()
+    - Trả về { loading, error, success, submit }
+  */
 
 import { useState, useCallback } from 'react';
 import authService from '../services/authService';

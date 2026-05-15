@@ -26,9 +26,7 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────
 // authorize – Kiểm tra role
-// ─────────────────────────────────────────────────────────────────
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -43,9 +41,7 @@ const authorize = (...roles) => {
   };
 };
 
-// ─────────────────────────────────────────────────────────────────
 // Shorthands
-// ─────────────────────────────────────────────────────────────────
 const isAdmin          = authorize(ROLES.ADMIN);
 const isAdminOrManager = authorize(ROLES.ADMIN, ROLES.MANAGER);
 const isAdminOrSales   = authorize(ROLES.ADMIN, ROLES.SALES);

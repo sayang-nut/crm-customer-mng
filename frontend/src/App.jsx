@@ -9,7 +9,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 
-// ── Pages ──────────────────────────────────────────────────────────
+//Pages 
 import LoginPage          from './pages/auth/LoginPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import { Page403, Page404 } from './pages/auth/ErrorPages';
@@ -32,7 +32,7 @@ import { ROLE_HOME } from './constants';
 
 
 
-// ── RoleRedirect - Loading Trắng ──────────────────────────────────
+// RoleRedirect - Loading Trắng 
 const RoleRedirect = () => {
   const { user, isLoading } = useAuth();
 
@@ -49,7 +49,7 @@ const RoleRedirect = () => {
   return <Navigate to={ROLE_HOME[user.role] || '/dashboard'} replace />;
 };
 
-// ── MainLayout - Cấu trúc Flexbox Trắng ────────────────────────────
+// ── MainLayout - Cấu trúc Flexbox 
 const MainLayout = ({ children }) => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans antialiased">
@@ -71,14 +71,14 @@ const MainLayout = ({ children }) => {
   );
 };
 
-// ── HOC WithLayout ────────────────────────────────────────────────
+// ── HOC WithLayout
 const WithLayout = ({ children, allowedRoles }) => (
   <ProtectedRoute allowedRoles={allowedRoles}>
     <MainLayout>{children}</MainLayout>
   </ProtectedRoute>
 );
 
-// ── AppRoutes ─────────────────────────────────────────────────────
+// ── AppRoutes 
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<LoginPage />} />

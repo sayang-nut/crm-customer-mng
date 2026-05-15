@@ -8,7 +8,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        // BADO Brand Colors
         primary: {
           50: '#f0fdf4',
           100: '#dcfce7',

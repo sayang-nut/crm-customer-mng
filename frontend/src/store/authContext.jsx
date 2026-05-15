@@ -1,9 +1,3 @@
-/**
- * @file     frontend/src/store/authContext.jsx
- * ─────────────────────────────────────────────────────────────────
- * FIX: Init không gọi qua interceptor → không bị redirect loop
- * FIX: isLoading = true trong khi init → RoleRedirect chờ xong
- */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import authService from '../services/authService';
@@ -17,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [user,      setUser]      = useState(null);
   const [isLoading, setIsLoading] = useState(true); // BẮT ĐẦU LÀ TRUE
 
-  // ── Restore session khi app khởi động ──────────────────────────
+  // ── Restore session khi app khởi động
   useEffect(() => {
     const init = async () => {
       const refreshToken = localStorage.getItem('refreshToken');
@@ -35,7 +29,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        // ✅ Dùng axios THUẦN (không qua interceptor) để tránh loop
+        // Dùng axios THUẦN (không qua interceptor) để tránh loop
         const { data } = await axios.post(
           `${CLEAN_URL}/api/auth/refresh`,
           { refreshToken },
@@ -63,29 +57,29 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setUser(null);
-        // ✅ KHÔNG redirect ở đây — để React Router tự xử lý
+        //  KHÔNG redirect ở đây — để React Router tự xử lý
       } finally {
-        setIsLoading(false); // ← BẮT BUỘC luôn set false
+        setIsLoading(false); //  BẮT BUỘC luôn set false
       }
     };
 
     init();
   }, []);
 
-  // ── login ───────────────────────────────────────────────────────
+  // ── login 
   const login = useCallback(async (email, password) => {
     const result = await authService.login(email, password);
     setUser(result.user);
     return result;
   }, []);
 
-  // ── logout ──────────────────────────────────────────────────────
+  // ── logout
   const logout = useCallback(async () => {
     await authService.logout();
     setUser(null);
   }, []);
 
-  // ── refreshUser ─────────────────────────────────────────────────
+  // ── refreshUser 
   const refreshUser = useCallback(async () => {
     const me = await authService.getMe();
     setUser(me);

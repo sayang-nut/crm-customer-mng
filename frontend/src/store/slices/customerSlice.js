@@ -1,40 +1,30 @@
-/**
- * @file     frontend/src/store/slices/customerSlice.js
- * @location frontend/src/store/slices/customerSlice.js
- * ─────────────────────────────────────────────────────────────────
- * @requires ../../../services/customerService → API calls
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: Redux slice quản lý state khách hàng.
- *
- * State:
- *   items[]          – danh sách customer trang hiện tại
- *   currentCustomer  – customer đang xem chi tiết
- *   pagination       – { page, limit, total, totalPages }
- *   filters          – { status, industryId, assignedTo, source, search }
- *   loading          – boolean
- *   error            – string | null
- *
- * Thunks:
- *   fetchCustomers(params)
- *   fetchCustomerById(id)
- *   createCustomer(data)
- *   updateCustomer({ id, data })
- *   deleteCustomer(id)
- *   changeCustomerStatus({ id, status, reason })
- *
- * Actions:
- *   setFilters(filters)
- *   clearFilters()
- *   setPage(page)
- *   clearCurrentCustomer()
- * ─────────────────────────────────────────────────────────────────
+/*
+ VAI TRÒ: Redux slice quản lý state khách hàng.
+   State:
+   items[]          – danh sách customer trang hiện tại
+   currentCustomer  – customer đang xem chi tiết
+    pagination       – { page, limit, total, totalPages }
+    filters          – { status, industryId, assignedTo, source, search }
+    loading          – boolean
+    error            – string | null
+   Thunks:
+    fetchCustomers(params)
+    fetchCustomerById(id)
+    createCustomer(data)
+    updateCustomer({ id, data })
+    deleteCustomer(id)
+    changeCustomerStatus({ id, status, reason })
+   Actions:
+    setFilters(filters)
+    clearFilters()
+    setPage(page)
+    clearCurrentCustomer()
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import customerService from '../../services/customerService';
 
-// ── Thunks ────────────────────────────────────────────────────────
-
+// ── Thunks
 export const fetchCustomers = createAsyncThunk(
   'customers/fetchAll',
   async (params, { rejectWithValue }) => {
@@ -107,7 +97,7 @@ export const changeCustomerStatus = createAsyncThunk(
   }
 );
 
-// ── Slice ─────────────────────────────────────────────────────────
+// ── Slice
 
 const customerSlice = createSlice({
   name: 'customers',

@@ -1,10 +1,6 @@
-/**
- * @file     frontend/src/store/slices/notificationSlice.js
- * @location frontend/src/store/slices/notificationSlice.js
- * ─────────────────────────────────────────────────────────────────
- * VAI TRÒ: Toast notification state (in-app, không lưu DB).
- * Dùng: dispatch(addNotification({ type, title, message }))
- * ─────────────────────────────────────────────────────────────────
+/*
+  VAI TRÒ: Toast notification state (in-app, không lưu DB).
+  Dùng: dispatch(addNotification({ type, title, message }))
  */
 
 import { createSlice } from '@reduxjs/toolkit';

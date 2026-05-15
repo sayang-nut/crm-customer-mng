@@ -52,7 +52,8 @@ const getFileLink = (url) => {
   if (!url) return '#';
   let finalUrl = url;
   if (!url.startsWith('http')) {
-    finalUrl = `http://localhost:5000/${url.replace(/\\/g, '/')}`;
+    const path = url.replace(/\\/g, '/').replace(/^\/+/, '');
+    finalUrl = `${window.location.origin}/${path}`;
   }
   if (finalUrl.match(/\.(doc|docx)$/i) && finalUrl.includes('cloudinary.com')) {
     return `https://docs.google.com/viewer?url=${encodeURIComponent(finalUrl)}`;

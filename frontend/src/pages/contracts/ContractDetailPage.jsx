@@ -21,7 +21,8 @@ const getFileLink = (url) => {
   if (!url) return '#';
   let finalUrl = url;
   if (!url.startsWith('http')) {
-    finalUrl = `http://localhost:5000/${url.replace(/\\/g, '/')}`; // Xử lý file local cũ
+    const path = url.replace(/\\/g, '/').replace(/^\/+/, '');
+    finalUrl = `${window.location.origin}/${path}`; // Xử lý file local cũ
   }
   // Dùng Google Docs Viewer cho file Word (nếu là link Cloudinary public)
   if (finalUrl.match(/\.(doc|docx)$/i) && finalUrl.includes('cloudinary.com')) {

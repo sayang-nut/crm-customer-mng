@@ -60,14 +60,14 @@ module.exports = {
     URGENT: 'urgent',
   },
 
-  TICKET_TYPE: {
-    TECHNICAL: 'technical',
-    PAYMENT:   'payment',
-    GUIDANCE:  'guidance',
-    UPGRADE:   'upgrade',
-    COMPLAINT: 'complaint',
-    CARE:      'care',
-  },
+  // TICKET_TYPE: {
+  //   TECHNICAL: 'technical',
+  //   PAYMENT:   'payment',
+  //   GUIDANCE:  'guidance',
+  //   UPGRADE:   'upgrade',
+  //   COMPLAINT: 'complaint',
+  //   CARE:      'care',
+  // },
 
   // ── Thanh toán ───────────────────────────────────────────────
   PAYMENT_METHOD: {
@@ -97,7 +97,7 @@ module.exports = {
     TICKET_AUTO_CLOSED:        'ticket_auto_closed',
   },
 
-  // ── Business rules (fallback nếu .env không set) ─────────────
+  // ── Business rules (fallback nếu .env lỗi
   BUSINESS_RULES: {
     CONTRACT_WARN_DAYS_1:          parseInt(process.env.CONTRACT_WARN_DAYS_1)          || 30,
     CONTRACT_WARN_DAYS_2:          parseInt(process.env.CONTRACT_WARN_DAYS_2)          || 7,

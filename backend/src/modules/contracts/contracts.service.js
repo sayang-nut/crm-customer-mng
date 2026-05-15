@@ -126,7 +126,7 @@ const listContracts = async (user, {
 
   const [rows] = await sequelize.query(
     `SELECT c.id, c.contract_number, c.billing_cycle, c.start_date, c.end_date,
-            c.value, c.discount, c.final_value, c.status, c.created_at,
+            c.value, c.discount, c.final_value, c.status, c.attachment_url, c.created_at,
             cu.id AS customer_id, cu.company_name,
             s.name  AS solution_name,
             sp.name AS package_name, sp.level AS package_level,

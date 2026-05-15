@@ -1,10 +1,4 @@
-/**
- * @file     frontend/src/pages/auth/ErrorPages.jsx
- * @location frontend/src/pages/auth/ErrorPages.jsx
- * ─────────────────────────────────────────────────────────────────
- * @requires react-router-dom        → Link, useNavigate
- * @requires ../../store/authContext → useAuth
- * ─────────────────────────────────────────────────────────────────
+/*
  * VAI TRÒ: Trang lỗi dùng chung toàn app.
  *   Page403 – 403 Forbidden  (không đủ quyền)
  *   Page404 – 404 Not Found  (route không tồn tại)
@@ -79,7 +73,7 @@ export const Page403 = () => {
   );
 };
 
-// ── 404 Not Found ─────────────────────────────────────────────────
+// ── 404 Not Found 
 export const Page404 = () => {
   const navigate = useNavigate();
   return (
