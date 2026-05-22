@@ -52,12 +52,14 @@ của Bado, thay thế các giải pháp thị trường (HubSpot, Odoo) không 
 | Security | bcrypt, Helmet, CORS, Rate Limiting, express-validator |
 
 ## Screenshots
+## Screenshots: Một vài screen tiêu biểu
 
-| Dashboard Admin | Quản lý Khách hàng |
-|---|---|
-| ![](./screenshots/dashboard.png) | ![](./screenshots/customers.png) |
-
-| Chi tiết Hợp đồng | Ticket Support |
-|---|---|
-| ![](screenshots/contract.png) | ![](screenshots/ticket.png) |
+- **Dashboard Admin**
+  - ![](screenshots/dashboardAdmin.png)
+- **Quản lý Khách hàng**
+  - ![](screenshots/dashboardTechnical.png)
+- **Chi tiết Hợp đồng**
+  - ![](screenshots/contracts.png)
+- **Ticket Support**
+  - ![](screenshots/tickets.png)
 
