@@ -52,3 +52,8 @@ Thumbs.db
 
 # Test coverage
 coverage/
+# Ignore sensitive config files
+backend/src/config/cloudinary.js
+backend/src/config/constants.js
+backend/src/config/database.js
+backend/src/config/logger.js
