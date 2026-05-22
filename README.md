@@ -55,7 +55,7 @@ của Bado, thay thế các giải pháp thị trường (HubSpot, Odoo) không 
 
 | Dashboard Admin | Quản lý Khách hàng |
 |---|---|
-| ![](screenshots/dashboard.png) | ![](screenshots/customers.png) |
+| ![](./screenshots/dashboard.png) | ![](./screenshots/customers.png) |
 
 | Chi tiết Hợp đồng | Ticket Support |
 |---|---|
